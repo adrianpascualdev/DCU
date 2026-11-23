@@ -1,0 +1,66 @@
+{
+    "recommendations": [
+        // Desarrollo .NET
+        "ms-dotnettools.vscode-dotnet-runtime",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+
+        // Desarrollo web (JavaScript y HTML)
+        "dbaeumer.vscode-eslint",
+        "george-alisson.html-preview-vscode",
+        "anseki.vscode-color",
+
+        // Desarrollo Python
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.vscode-python-envs",
+
+        // Edición de JSON
+        "ZainChen.json",
+        "Meezilla.json",
+
+        // PowerShell
+        "ms-vscode.PowerShell",
+
+        // SQL Server y proyectos de bases de datos
+        "ms-mssql.mssql",
+        "ms-mssql.sql-database-projects-vscode",
+
+        // Markdown y exportación a PDF
+        "DavidAnson.vscode-markdownlint",
+        "yzane.markdown-pdf",
+
+        // Edición de XML
+        "DotJoshJohnson.xml",
+        "redhat.vscode-xml",
+
+        // Copilot y búsqueda web
+        "ms-vscode.vscode-websearchforcopilot",
+
+        // Azure, infraestructura y despliegue
+        "ms-vscode.vscode-node-azure-pack",
+        "ms-azuretools.azure-dev",
+        "ms-azuretools.vscode-azure-github-copilot",
+        "ms-azuretools.vscode-azure-mcp-server",
+        "ms-azuretools.vscode-azureresourcegroups",
+        "ms-azuretools.vscode-bicep",
+        "ms-azuretools.vscode-azureappservice",
+        "ms-azuretools.vscode-azurestaticwebapps",
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-azuretools.vscode-azurecontainerapps",
+        "ms-azuretools.vscode-azurestorage",
+        "ms-azuretools.vscode-azurevirtualmachines",
+        "ms-azuretools.vscode-cosmosdb",
+        "ms-azure-devops.azure-pipelines",
+        "ms-azure-load-testing.microsoft-testing",
+
+        // IA y desarrollo de agentes
+        "ms-windows-ai-studio.windows-ai-studio",
+
+        // Utilidades y productividad
+        "bokuweb.vscode-ripgrep",
+        "Gruntfuggly.todo-tree",
+        "PKief.material-icon-theme",
+        "GrapeCity.gc-excelviewer"
+    ]
+}

@@ -1,0 +1,103 @@
+{
+  "inputs": [
+    {
+      "id": "ado_org",
+      "type": "promptString",
+      "description": "Azure DevOps organization name (e.g. 'upv').",
+      "default": "DCU-UPV26",
+			"password": false
+    },
+		{
+			"id": "ado_domain",
+			"type": "promptString",
+			"description": "Repeat to enable specific domains: core, work, work-items, search, test-plans, repositories, wiki, pipelines, advanced-security.",
+      "default": "dev.azure.com",
+			"password": false
+		}
+    ,
+		{
+			"id": "context7_api_key",
+			"type": "promptString",
+			"description": "Context7 API key.",
+      "default": "",
+			"password": true
+		},
+		{
+			"id": "figma_api_token",
+			"type": "promptString",
+			"description": "Figma Personal Access Token (Settings > Personal access tokens).",
+			"default": "pon aquí tu token",
+			"password": true
+		}
+  ],
+  "servers": {
+		// Azure DevOps y GitHub: repositorios, trabajo y colaboración
+		"mcp-azure-devops": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@azure-devops/mcp@latest",
+				"${input:ado_org}",
+				"-d",
+				"${input:ado_domain}"
+			]
+		},
+    "mcp-githubcopilot": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    // Acceso al workspace y memoria persistente
+    "mcp-filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${workspaceFolder}"
+      ]
+    },
+    "mcp-memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+		// Automatización del navegador y conversión de documentos
+    "mcp-playwright": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"@playwright/mcp@latest"
+			]
+		},
+    // Conversión de documentos a Markdown
+    "mcp-markitdown": {
+			"type": "stdio",
+			"command": "uvx",
+			"args": [
+				"markitdown-mcp@0.0.1a8"
+			]
+		},
+		// Documentación técnica y consulta de bibliotecas
+    "mcp-microsoft-learn": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "mcp-context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "${input:context7_api_key}"
+      }
+    },
+		// Diseñoo y colaboración visual
+    "mcp-figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:figma_api_token}"
+      }
+    }
+  }
+}
