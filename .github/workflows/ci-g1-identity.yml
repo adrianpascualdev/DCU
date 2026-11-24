@@ -1,0 +1,90 @@
+name: CI G1 Identity
+
+on:
+  push:
+    branches:
+      - 001-g1-identidad-contrato-mock
+      - dev1/**
+      - dev2/**
+      - dev3/**
+      - dev4/**
+      - dev5/**
+  pull_request:
+    branches:
+      - 001-g1-identidad-contrato-mock
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.404
+  CONTRACT: specs/001-g1-identidad-contrato-mock/contracts/openapi.v1.yaml
+
+jobs:
+  build-test:
+    name: Restaurar, compilar, probar y validar el contrato
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código y ramas
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Instalar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Comprobar que el contrato está presente
+        shell: bash
+        run: |
+          if [ ! -f "$CONTRACT" ]; then
+            echo "::error::Falta el contrato normativo en $CONTRACT"
+            exit 1
+          fi
+
+      - name: Escanear secretos
+        shell: bash
+        run: |
+          patron='(-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)'
+          if git grep -nEI "$patron" -- . ':(exclude)specs/**/contracts/**'; then
+            echo "::error::Se detectó un posible secreto en el repositorio"
+            exit 1
+          fi
+
+      - name: Restaurar dependencias
+        run: dotnet restore G1.Identity.slnx
+
+      - name: Compilar
+        run: dotnet build G1.Identity.slnx --configuration Release --no-restore
+
+      - name: Ejecutar pruebas
+        # En Setup aún no hay pruebas de historia: MTP devuelve 8 cuando no se ejecuta ninguna.
+        run: dotnet test --solution G1.Identity.slnx --configuration Release --no-build -- --ignore-exit-code 8
+
+      - name: Instalar navegadores de Playwright
+        shell: bash
+        run: pwsh tests/G1.Identity.E2E/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Validar el contrato con Redocly
+        run: npx --yes @redocly/cli@2.83.0 lint "$CONTRACT"
+
+      - name: Preparar contrato base para oasdiff
+        id: base
+        shell: bash
+        run: |
+          git fetch origin 001-g1-identidad-contrato-mock || true
+          rama="origin/001-g1-identidad-contrato-mock"
+          if git cat-file -e "$rama:$CONTRACT" 2>/dev/null; then
+            git show "$rama:$CONTRACT" > /tmp/openapi-base.yaml
+            echo "existe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detectar cambios incompatibles del contrato
+        if: steps.base.outputs.existe == 'true'
+        uses: oasdiff/oasdiff-action/breaking@v0
+        with:
+          base: /tmp/openapi-base.yaml
+          revision: ${{ env.CONTRACT }}
