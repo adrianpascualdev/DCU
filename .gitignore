@@ -480,3 +480,13 @@ terraform.rc
 .squad/sessions/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+
+# Secretos y configuración local (solo ejemplos seguros se versionan)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.key
+*.pem
+secrets.json
+!secrets.example.json
