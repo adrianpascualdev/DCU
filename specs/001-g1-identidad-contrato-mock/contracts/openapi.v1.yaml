@@ -1,0 +1,1494 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+
+info:
+  title: G1 Identity API
+  version: 1.0.0
+  summary: Contrato de identidad y mock para G2, G3 y G4 (fase A)
+  description: |
+    Contrato OpenAPI 3.1 de la API de identidad de G1 y de la superficie OIDC/OAuth
+    observable del mock de la fase A.
+
+    Reglas principales:
+    - Authorization Code + PKCE S256 exclusivamente.
+    - Sin implicit flow, password grant, client_credentials para identidad de usuario
+      ni introspección en v1.
+    - `/me` devuelve roles y permisos efectivos; G1 no interpreta ámbitos de negocio.
+    - No existe endpoint de contacto de terceros.
+    - La audiencia `identity-api` es provisional y no autoriza por sí misma el acceso
+      a G2, G3 o G4.
+
+    El mock se ejecuta solo en desarrollo y pruebas. Los datos son ficticios y se
+    pierden al reiniciar.
+  contact:
+    name: Equipo G1 (Infraestructura)
+  license:
+    name: Uso académico interno
+    identifier: LicenseRef-Internal
+  termsOfService: https://identity.example.test/terminos
+
+externalDocs:
+  description: Especificación funcional de la feature 001
+  url: https://example.test/specs/001-g1-identidad-contrato-mock/spec.md
+
+servers:
+  - url: https://localhost:7180
+    description: Mock en desarrollo (HTTPS)
+  - url: http://localhost:5180
+    description: Mock en desarrollo (HTTP, solo local)
+
+tags:
+  - name: OIDC
+    description: Descubrimiento, JWKS, autorización, token, userinfo, revocación y logout.
+  - name: Identity
+    description: Identidad del usuario autenticado y consulta mínima de otros usuarios.
+  - name: Sessions
+    description: Sesiones propias, logout y revocación.
+  - name: Catalog
+    description: Catálogo versionado de roles y permisos propiedad de G1.
+  - name: Mock
+    description: Fixtures y reset; solo disponibles en desarrollo y pruebas.
+
+paths:
+  /.well-known/openid-configuration:
+    get:
+      tags: [OIDC]
+      operationId: getOpenIdConfiguration
+      summary: Documento de descubrimiento OIDC
+      description: Publica los endpoints, grants, scopes y algoritmos soportados.
+      security: []
+      responses:
+        '200':
+          description: Documento de descubrimiento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoveryDocument'
+              examples:
+                default:
+                  value:
+                    issuer: https://localhost:7180
+                    authorization_endpoint: https://localhost:7180/connect/authorize
+                    token_endpoint: https://localhost:7180/connect/token
+                    userinfo_endpoint: https://localhost:7180/connect/userinfo
+                    jwks_uri: https://localhost:7180/.well-known/jwks.json
+                    revocation_endpoint: https://localhost:7180/connect/revoke
+                    end_session_endpoint: https://localhost:7180/connect/logout
+                    response_types_supported: [code]
+                    grant_types_supported: [authorization_code, refresh_token]
+                    code_challenge_methods_supported: [S256]
+                    scopes_supported: [openid, profile, email, offline_access, identity.api]
+                    token_endpoint_auth_methods_supported: [none, client_secret_basic, client_secret_post]
+                    subject_types_supported: [public]
+                    id_token_signing_alg_values_supported: [RS256]
+                    claims_supported: [sub, name, email, email_verified, sid, roles, permissions]
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /.well-known/jwks.json:
+    get:
+      tags: [OIDC]
+      operationId: getJsonWebKeySet
+      summary: Claves públicas de firma
+      description: Publica las claves públicas usadas para validar los JWT. La clave privada nunca se expone.
+      security: []
+      responses:
+        '200':
+          description: Conjunto de claves públicas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwksDocument'
+              examples:
+                default:
+                  value:
+                    keys:
+                      - kty: RSA
+                        use: sig
+                        kid: dev-2026-11
+                        alg: RS256
+                        n: sXch0a1b2c3d4e5f6
+                        e: AQAB
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /connect/authorize:
+    get:
+      tags: [OIDC]
+      operationId: authorize
+      summary: Autorización interactiva con PKCE
+      description: |
+        Inicia Authorization Code + PKCE S256. Si no hay sesión de persona, redirige
+        al selector de personas del mock. El parámetro `mock_persona` solo se acepta
+        en desarrollo y pruebas y no emite tokens por sí mismo.
+      security: []
+      parameters:
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [code]
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Debe coincidir exactamente con una URI registrada.
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+          example: openid profile email identity.api
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 8
+          description: Valor opaco anti-CSRF que se devuelve sin modificar.
+        - name: nonce
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 8
+          description: Valor anti-replay del ID token.
+        - name: code_challenge
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 43
+            maxLength: 128
+        - name: code_challenge_method
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [S256]
+        - name: mock_persona
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Solo en Development/Testing. Selecciona una persona ficticia por su clave.
+            No emite tokens; solo autentica la sesión de desarrollo antes del código.
+      responses:
+        '302':
+          description: Redirección a la URI registrada con el código o al selector de personas.
+          headers:
+            Location:
+              description: URI de redirección registrada o selector del mock.
+              schema:
+                type: string
+                format: uri
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+        '400':
+          $ref: '#/components/responses/OAuthBadRequest'
+        '401':
+          $ref: '#/components/responses/OAuthUnauthorized'
+        '403':
+          description: El usuario autenticado no autoriza la petición.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthError'
+              examples:
+                accessDenied:
+                  value:
+                    error: access_denied
+                    error_description: El usuario no ha autorizado el acceso.
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /connect/token:
+    post:
+      tags: [OIDC]
+      operationId: exchangeToken
+      summary: Canje de código o de refresh token
+      description: |
+        Única vía de emisión de tokens. Acepta `authorization_code` con PKCE S256 y
+        `refresh_token` rotativo. Rechaza implicit, password, client_credentials y
+        cualquier concesión no prevista.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Tokens emitidos.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              examples:
+                authorizationCode:
+                  value:
+                    access_token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImRldi0yMDI2LTExIn0...
+                    token_type: Bearer
+                    expires_in: 300
+                    refresh_token: 7f4c2a9e...
+                    id_token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImRldi0yMDI2LTExIn0...
+                    scope: openid profile email identity.api
+        '400':
+          $ref: '#/components/responses/OAuthBadRequest'
+        '401':
+          $ref: '#/components/responses/OAuthUnauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /connect/userinfo:
+    get:
+      tags: [OIDC]
+      operationId: getUserInfo
+      summary: Claims del usuario autenticado
+      description: |
+        Devuelve solo los datos del usuario autenticado. Con scope `email` incluye
+        `email` y `email_verified`. No existe scope `phone` en v1 y no se devuelve
+        contacto de terceros (D-017).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Claims OIDC del usuario autenticado.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+              examples:
+                default:
+                  value:
+                    sub: usr_01HXCOACHANA
+                    name: Ana Entrenadora
+                    email: ana.entrenadora@example.test
+                    email_verified: true
+        '401':
+          description: Token ausente, caducado o inválido.
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: Bearer error="invalid_token"
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /connect/revoke:
+    post:
+      tags: [OIDC]
+      operationId: revokeToken
+      summary: Revocación de token (RFC 7009)
+      description: Revoca un refresh token o un access token. Es idempotente y no revela si el token ya estaba revocado.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RevokeRequest'
+      responses:
+        '200':
+          description: Token revocado o ya inválido; respuesta vacía.
+        '400':
+          $ref: '#/components/responses/OAuthBadRequest'
+        '401':
+          $ref: '#/components/responses/OAuthUnauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /connect/logout:
+    get:
+      tags: [OIDC]
+      operationId: logoutOidc
+      summary: Fin de sesión OIDC (RP-initiated)
+      description: Cierra la sesión del proveedor y redirige a la URI de retorno registrada con coincidencia exacta.
+      security: []
+      parameters:
+        - name: id_token_hint
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ID token que identifica la sesión a cerrar.
+        - name: post_logout_redirect_uri
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Debe coincidir exactamente con una URI registrada.
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: client_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirección tras cerrar la sesión.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '204':
+          description: Sesión cerrada sin redirección.
+        '400':
+          $ref: '#/components/responses/OAuthBadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [OIDC]
+      operationId: logoutOidcPost
+      summary: Fin de sesión OIDC mediante formulario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '302':
+          description: Redirección tras cerrar la sesión.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '204':
+          description: Sesión cerrada sin redirección.
+        '400':
+          $ref: '#/components/responses/OAuthBadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/me:
+    get:
+      tags: [Identity]
+      operationId: getCurrentIdentity
+      summary: Identidad y permisos efectivos
+      description: |
+        Devuelve la identidad del usuario autenticado, sus roles y permisos efectivos.
+        Acepta cookie o Bearer y produce la misma respuesta. No incluye datos de otros
+        usuarios ni contacto de terceros.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Identidad del usuario autenticado.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+              examples:
+                coach:
+                  value:
+                    userId: usr_01HXCOACHANA
+                    displayName: Ana Entrenadora
+                    email: ana.entrenadora@example.test
+                    emailVerified: true
+                    phoneVerified: true
+                    roles: [coach]
+                    permissions: []
+                    sessionId: ses_01HXSESSION
+                    authenticatedAt: '2026-11-24T09:00:00Z'
+                    expiresAt: '2026-11-24T09:30:00Z'
+                    authenticationMethods: [mock_persona]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/identity/users/{userId}/summary:
+    get:
+      tags: [Identity]
+      operationId: getUserSummary
+      summary: Resumen mínimo de otro usuario
+      description: |
+        Devuelve solo `userId`, `displayName`, `roles` y `active`. Excluye correo,
+        teléfono, datos del tutor y cualquier dato sensible. Un usuario inexistente o
+        no visible devuelve 404 para no permitir enumeración.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: Resumen mínimo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummary'
+              examples:
+                default:
+                  value:
+                    userId: usr_01HXPLAYERMINOR
+                    displayName: Menor Deportista
+                    roles: [player]
+                    active: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/users/lookup:
+    post:
+      tags: [Identity]
+      operationId: lookupUsers
+      summary: Resumen por lote
+      description: Resuelve hasta 100 identificadores por petición, deduplica y separa `users` y `missing`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LookupRequest'
+            examples:
+              default:
+                value:
+                  userIds: [usr_01HXCOACHANA, usr_01HXPLAYERMINOR]
+      responses:
+        '200':
+          description: Usuarios resueltos y ausentes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupResponse'
+              examples:
+                default:
+                  value:
+                    users:
+                      - userId: usr_01HXCOACHANA
+                        displayName: Ana Entrenadora
+                        roles: [coach]
+                        active: true
+                    missing: [usr_01HXDESCONOCIDO]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/sessions:
+    get:
+      tags: [Sessions]
+      operationId: listSessions
+      summary: Sesiones propias
+      description: Lista solo las sesiones del usuario autenticado, sin IP ni secretos.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Sesiones del usuario.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionList'
+              examples:
+                default:
+                  value:
+                    items:
+                      - sessionId: ses_01HXSESSION
+                        current: true
+                        createdAt: '2026-11-24T09:00:00Z'
+                        lastSeenAt: '2026-11-24T09:20:00Z'
+                        expiresAt: '2026-11-24T09:50:00Z'
+                        clientId: cli_mock_spa
+                        deviceLabel: Navegador de desarrollo
+                    page: 1
+                    pageSize: 20
+                    total: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/sessions/{sessionId}:
+    delete:
+      tags: [Sessions]
+      operationId: revokeSession
+      summary: Revocar una sesión propia
+      description: Revoca la sesión y sus refresh tokens. Una sesión ajena o inexistente devuelve 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionIdPath'
+      responses:
+        '204':
+          description: Sesión revocada o ya inexistente.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/sessions/revoke-all:
+    post:
+      tags: [Sessions]
+      operationId: revokeAllSessions
+      summary: Revocar otras sesiones
+      description: Revoca todas las sesiones del usuario y sus refresh tokens. Es idempotente.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeAllRequest'
+            examples:
+              default:
+                value:
+                  keepCurrentSession: true
+      responses:
+        '204':
+          description: Sesiones revocadas.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/logout:
+    post:
+      tags: [Sessions]
+      operationId: logoutCurrentSession
+      summary: Cerrar la sesión actual
+      description: |
+        Revoca la sesión actual y sus refresh tokens. Los access tokens ya emitidos
+        siguen válidos hasta su `exp`; no se promete revocación inmediata del JWT.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Sesión cerrada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/catalog/roles:
+    get:
+      tags: [Catalog]
+      operationId: listRoles
+      summary: Catálogo de roles
+      description: Publica los roles con etiqueta en castellano, descripción y si son asignables.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Catálogo versionado de roles.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleCatalog'
+              examples:
+                default:
+                  value:
+                    catalogVersion: 1.0.0-provisional
+                    provisional: true
+                    items:
+                      - code: club_admin
+                        label: Administrador del club
+                        description: Administración de identidad y configuración de G1.
+                        assignable: true
+                      - code: coach
+                        label: Entrenador
+                        description: Entrenador de equipo o categoría.
+                        assignable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/catalog/permissions:
+    get:
+      tags: [Catalog]
+      operationId: listPermissions
+      summary: Catálogo de permisos
+      description: Publica solo los permisos propiedad de G1. Los permisos de G2, G3 y G4 los publican sus propietarios.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Catálogo versionado de permisos.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionCatalog'
+              examples:
+                default:
+                  value:
+                    catalogVersion: 1.0.0-provisional
+                    provisional: true
+                    items:
+                      - code: identity.users.summary.read
+                        label: Leer resumen de usuarios
+                        ownerModule: G1
+                        description: Consultar el resumen mínimo de otro usuario.
+                      - code: identity.users.lookup
+                        label: Resolver usuarios por lote
+                        ownerModule: G1
+                        description: Resolver hasta 100 identificadores por petición.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/identity/mock/personas:
+    get:
+      tags: [Mock]
+      operationId: listMockPersonas
+      summary: Personas ficticias disponibles
+      description: |
+        Solo en desarrollo y pruebas. Publica las personas, sus roles, permisos y
+        estados para que las pruebas sean deterministas. Fuera de ese entorno devuelve 404.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Personas y estados disponibles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonaList'
+              examples:
+                default:
+                  value:
+                    fixtureVersion: 1.0.0
+                    items:
+                      - key: coach.ana
+                        userId: usr_01HXCOACHANA
+                        displayName: Ana Entrenadora
+                        email: ana.entrenadora@example.test
+                        emailVerified: true
+                        phoneVerified: true
+                        status: active
+                        isMinor: false
+                        roles: [coach]
+                        permissions: []
+                        authenticationMethods: [mock_persona]
+                        labels: [restricted-scope]
+                    page: 1
+                    pageSize: 20
+                    total: 1
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/identity/mock/reset:
+    post:
+      tags: [Mock]
+      operationId: resetMock
+      summary: Restaurar fixtures
+      description: |
+        Solo en desarrollo y pruebas. Restaura personas, sesiones y tokens al estado
+        inicial de forma idempotente. Fuera de ese entorno devuelve 404.
+      security: []
+      responses:
+        '204':
+          description: Fixtures restaurados.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __Host-g1.session
+      description: Cookie de sesión HttpOnly, Secure y SameSite=Lax. Las escrituras requieren antiforgery.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token de acceso emitido por `/connect/token`.
+
+  parameters:
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      description: Identificador opaco del usuario.
+      schema:
+        type: string
+        pattern: '^usr_[A-Za-z0-9_-]+$'
+    SessionIdPath:
+      name: sessionId
+      in: path
+      required: true
+      description: Identificador opaco de la sesión.
+      schema:
+        type: string
+        pattern: '^ses_[A-Za-z0-9_-]+$'
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  headers:
+    CorrelationId:
+      description: Identificador de correlación de la petición.
+      schema:
+        type: string
+    ETag:
+      description: Versión del catálogo para validación con `If-None-Match`.
+      schema:
+        type: string
+
+  responses:
+    BadRequest:
+      description: Petición inválida.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            invalid:
+              value:
+                type: https://identity.example.test/errors/request-invalid
+                title: Petición inválida
+                status: 400
+                detail: El lote supera el máximo de 100 identificadores.
+                instance: /api/v1/identity/users/lookup
+                code: identity.request.invalid
+                traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+    Unauthorized:
+      description: Identidad ausente o inválida.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            required:
+              value:
+                type: https://identity.example.test/errors/session-required
+                title: Sesión requerida
+                status: 401
+                detail: Debes iniciar sesión para acceder a este recurso.
+                instance: /api/v1/identity/me
+                code: identity.session.required
+                traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+            invalid:
+              value:
+                type: https://identity.example.test/errors/session-invalid
+                title: Sesión inválida
+                status: 401
+                detail: La credencial ha caducado o no es válida.
+                instance: /api/v1/identity/me
+                code: identity.session.invalid
+                traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+    Forbidden:
+      description: Identidad válida sin permiso suficiente.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            denied:
+              value:
+                type: https://identity.example.test/errors/permission-denied
+                title: Permiso insuficiente
+                status: 403
+                detail: No tienes permiso para consultar este recurso.
+                instance: /api/v1/identity/users/usr_01HXPLAYERMINOR/summary
+                code: identity.permission.denied
+                traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+    NotFound:
+      description: Recurso inexistente o no visible.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            notFound:
+              value:
+                type: https://identity.example.test/errors/user-not-found
+                title: Recurso no encontrado
+                status: 404
+                detail: El recurso solicitado no existe o no es visible.
+                instance: /api/v1/identity/users/usr_01HXDESCONOCIDO/summary
+                code: identity.user.not_found
+                traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+    TooManyRequests:
+      description: Límite de peticiones superado.
+      headers:
+        Retry-After:
+          description: Segundos hasta reintentar.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            limited:
+              value:
+                type: https://identity.example.test/errors/rate-limited
+                title: Demasiadas peticiones
+                status: 429
+                detail: Inténtalo de nuevo más tarde.
+                instance: /api/v1/identity/me
+                code: identity.rate_limited
+                traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+    InternalError:
+      description: Error interno no expuesto.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            internal:
+              value:
+                type: https://identity.example.test/errors/internal
+                title: Error interno
+                status: 500
+                detail: Se ha producido un error inesperado.
+                instance: /api/v1/identity/me
+                code: identity.internal_error
+                traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+    OAuthBadRequest:
+      description: Error OAuth estándar.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OAuthError'
+          examples:
+            invalidGrant:
+              value:
+                error: invalid_grant
+                error_description: El código no es válido o ya se ha usado.
+                state: 8f14e45f
+    OAuthUnauthorized:
+      description: Cliente no autenticado o no autorizado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OAuthError'
+          examples:
+            invalidClient:
+              value:
+                error: invalid_client
+                error_description: El cliente no es válido.
+
+  schemas:
+    ProblemDetails:
+      type: object
+      required: [type, title, status, code, traceId]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          description: Código estable de error de la API de identidad.
+        traceId:
+          type: string
+          description: Identificador de traza distribuida.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Errores por campo, solo cuando es seguro exponerlos.
+
+    OAuthError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum:
+            - invalid_request
+            - invalid_client
+            - invalid_grant
+            - unauthorized_client
+            - unsupported_grant_type
+            - invalid_scope
+            - access_denied
+            - server_error
+            - temporarily_unavailable
+        error_description:
+          type: string
+        error_uri:
+          type: string
+          format: uri
+        state:
+          type: string
+
+    MeResponse:
+      type: object
+      required:
+        - userId
+        - displayName
+        - email
+        - emailVerified
+        - phoneVerified
+        - roles
+        - permissions
+        - sessionId
+        - authenticatedAt
+        - expiresAt
+        - authenticationMethods
+      properties:
+        userId:
+          type: string
+          pattern: '^usr_'
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        emailVerified:
+          type: boolean
+        phoneVerified:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+          description: Códigos estables del catálogo de roles.
+        permissions:
+          type: array
+          items:
+            type: string
+          description: Permisos efectivos; no es la matriz completa.
+        sessionId:
+          type: string
+          pattern: '^ses_'
+        authenticatedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        authenticationMethods:
+          type: array
+          items:
+            type: string
+
+    UserSummary:
+      type: object
+      required: [userId, displayName, roles, active]
+      properties:
+        userId:
+          type: string
+          pattern: '^usr_'
+        displayName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+
+    LookupRequest:
+      type: object
+      required: [userIds]
+      properties:
+        userIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^usr_'
+
+    LookupResponse:
+      type: object
+      required: [users, missing]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSummary'
+        missing:
+          type: array
+          items:
+            type: string
+
+    Session:
+      type: object
+      required:
+        - sessionId
+        - current
+        - createdAt
+        - lastSeenAt
+        - expiresAt
+        - clientId
+        - deviceLabel
+      properties:
+        sessionId:
+          type: string
+          pattern: '^ses_'
+        current:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        clientId:
+          type: string
+        deviceLabel:
+          type: string
+
+    SessionList:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+
+    RevokeAllRequest:
+      type: object
+      properties:
+        keepCurrentSession:
+          type: boolean
+          default: true
+
+    Role:
+      type: object
+      required: [code, label, description, assignable]
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+        label:
+          type: string
+        description:
+          type: string
+        assignable:
+          type: boolean
+
+    Permission:
+      type: object
+      required: [code, label, ownerModule, description]
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_.]*$'
+        label:
+          type: string
+        ownerModule:
+          type: string
+          example: G1
+        description:
+          type: string
+
+    RoleCatalog:
+      type: object
+      required: [catalogVersion, provisional, items]
+      properties:
+        catalogVersion:
+          type: string
+        provisional:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+
+    PermissionCatalog:
+      type: object
+      required: [catalogVersion, provisional, items]
+      properties:
+        catalogVersion:
+          type: string
+        provisional:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+
+    Persona:
+      type: object
+      required:
+        - key
+        - userId
+        - displayName
+        - email
+        - emailVerified
+        - phoneVerified
+        - status
+        - isMinor
+        - roles
+        - permissions
+        - authenticationMethods
+      properties:
+        key:
+          type: string
+          example: coach.ana
+        userId:
+          type: string
+          pattern: '^usr_'
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        emailVerified:
+          type: boolean
+        phoneVerified:
+          type: boolean
+        status:
+          type: string
+          enum: [active, inactive, locked]
+        isMinor:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        authenticationMethods:
+          type: array
+          items:
+            type: string
+        labels:
+          type: array
+          items:
+            type: string
+
+    PersonaList:
+      type: object
+      required: [fixtureVersion, items, page, pageSize, total]
+      properties:
+        fixtureVersion:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Persona'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+
+    TokenRequest:
+      type: object
+      required: [grant_type]
+      properties:
+        grant_type:
+          type: string
+          enum: [authorization_code, refresh_token]
+        code:
+          type: string
+          description: Obligatorio con `authorization_code`.
+        redirect_uri:
+          type: string
+          format: uri
+          description: Obligatorio con `authorization_code` y coincidencia exacta.
+        code_verifier:
+          type: string
+          minLength: 43
+          maxLength: 128
+          description: Obligatorio con `authorization_code`; PKCE S256.
+        refresh_token:
+          type: string
+          description: Obligatorio con `refresh_token`.
+        client_id:
+          type: string
+        client_secret:
+          type: string
+          description: Solo para clientes confidenciales; nunca se registra.
+        scope:
+          type: string
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in, scope]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          minimum: 1
+        refresh_token:
+          type: string
+        id_token:
+          type: string
+        scope:
+          type: string
+
+    RevokeRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+        token_type_hint:
+          type: string
+          enum: [access_token, refresh_token]
+        client_id:
+          type: string
+        client_secret:
+          type: string
+
+    LogoutRequest:
+      type: object
+      properties:
+        id_token_hint:
+          type: string
+        post_logout_redirect_uri:
+          type: string
+          format: uri
+        state:
+          type: string
+        client_id:
+          type: string
+
+    UserInfoResponse:
+      type: object
+      required: [sub]
+      properties:
+        sub:
+          type: string
+          pattern: '^usr_'
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        email_verified:
+          type: boolean
+
+    DiscoveryDocument:
+      type: object
+      required:
+        - issuer
+        - authorization_endpoint
+        - token_endpoint
+        - userinfo_endpoint
+        - jwks_uri
+        - revocation_endpoint
+        - end_session_endpoint
+        - response_types_supported
+        - grant_types_supported
+        - code_challenge_methods_supported
+        - scopes_supported
+      properties:
+        issuer:
+          type: string
+          format: uri
+        authorization_endpoint:
+          type: string
+          format: uri
+        token_endpoint:
+          type: string
+          format: uri
+        userinfo_endpoint:
+          type: string
+          format: uri
+        jwks_uri:
+          type: string
+          format: uri
+        revocation_endpoint:
+          type: string
+          format: uri
+        end_session_endpoint:
+          type: string
+          format: uri
+        response_types_supported:
+          type: array
+          items:
+            type: string
+        grant_types_supported:
+          type: array
+          items:
+            type: string
+        code_challenge_methods_supported:
+          type: array
+          items:
+            type: string
+            enum: [S256]
+        scopes_supported:
+          type: array
+          items:
+            type: string
+        token_endpoint_auth_methods_supported:
+          type: array
+          items:
+            type: string
+        subject_types_supported:
+          type: array
+          items:
+            type: string
+        id_token_signing_alg_values_supported:
+          type: array
+          items:
+            type: string
+        claims_supported:
+          type: array
+          items:
+            type: string
+
+    JwksDocument:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Jwk'
+
+    Jwk:
+      type: object
+      required: [kty, kid, use, alg]
+      properties:
+        kty:
+          type: string
+          enum: [RSA, EC]
+        kid:
+          type: string
+        use:
+          type: string
+          enum: [sig]
+        alg:
+          type: string
+          enum: [RS256, ES256]
+        n:
+          type: string
+        e:
+          type: string
+        crv:
+          type: string
+        x:
+          type: string
+        y:
+          type: string
+
+security: []
