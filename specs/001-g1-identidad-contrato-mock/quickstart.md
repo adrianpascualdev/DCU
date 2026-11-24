@@ -13,7 +13,7 @@ Guía ejecutable para comprobar que el contrato y el mock cumplen los escenarios
 - Certificado de desarrollo confiable: `dotnet dev-certs https --trust`.
 - Navegador Chromium instalado por Playwright para las pruebas E2E.
 
-> **Aviso**: el mock usa EF Core InMemory. Todos los datos, sesiones y tokens se pierden al reiniciar. No usar datos reales.
+> **Aviso**: el mock usa EF Core InMemory. Todos los datos, sesiones y tokens se pierden al reiniciar. No usar datos reales. ADR-0002 sigue pendiente de ratificación formal: esta guía describe la validación prevista, pero las tareas de implementación no deben ejecutarse hasta que se ratifique.
 
 ## 2. Arranque
 
@@ -36,7 +36,7 @@ Resultado esperado:
 
 - El mock escucha en `https://localhost:7180` y `http://localhost:5180`.
 - Los logs advierten de que la persistencia es InMemory y los datos son ficticios.
-- `GET https://localhost:7180/health` responde `200` (si se habilita el endpoint de salud en implementación).
+- No se publica ningún endpoint fuera del contrato; `/health` no forma parte de la fase A.
 
 ## 3. Swagger UI y contrato
 
@@ -91,6 +91,7 @@ Resultado esperado:
 - `refresh_token` si se solicitó `offline_access`.
 - Repetir el canje con el mismo código devuelve `400 invalid_grant`.
 - Un `code_verifier` incorrecto devuelve `400 invalid_grant`.
+- El access token lleva `aud=identity-api` y el ID token `aud=client_id`; se validan por separado con JWKS.
 
 ## 5. Llamada a `/me`
 
@@ -177,10 +178,10 @@ curl -sS -k -i -X POST "$ISSUER/api/v1/identity/mock/reset"
 
 Resultado esperado:
 
-- 18 personas con sus roles, permisos, estados y etiquetas.
+- 15 personas ficticias con sus roles, permisos, estados y etiquetas; las claves `token.*` son 4 escenarios de token y no aparecen como personas.
 - `fixtureVersion` estable.
-- `204` en reset y estado inicial restaurado; la operación es idempotente.
-- Fuera de Development/Testing ambos endpoints devuelven `404`.
+- `204` en reset y estado inicial restaurado; la operación es idempotente y no requiere token en v1.
+- Fuera de `Development`/`Testing` ambos endpoints devuelven `404`.
 
 ## 10. Pruebas automatizadas
 
@@ -218,20 +219,20 @@ Resultado esperado: sin errores de validación y sin rupturas no versionadas.
 
 ## 12. Criterios de aceptación cubiertos
 
-| Criterio | Comprobación |
-| --- | --- |
-| SC-001 | Un consumidor completa la guía y obtiene `200` de `/me` en 15 minutos o menos. |
-| SC-002 | Cada operación tiene prueba de éxito y de error; CI en verde. |
-| SC-003 | Cambiar emisor, cliente y claves no requiere cambios en el consumidor (prueba de humo). |
-| SC-004 | Los errores devuelven el código y esquema documentados, sin trazas ni secretos. |
-| SC-005 | El flujo Playwright pasa en Chromium en cada PR y en otro navegador en la ejecución programada. |
-| SC-006 | El documento valida como OpenAPI 3.1 y no tiene rupturas sin versión. |
-| SC-007 | `/me` responde con p95 inferior a 200 ms en local. |
-| SC-008 | El selector pasa las comprobaciones de accesibilidad y se usa solo con teclado. |
-| SC-009 | El escaneo de secretos no encuentra claves ni tokens reales. |
-| SC-010 | La revocación de sesión/refresh se refleja en la siguiente validación de G1; el access token expira por TTL. |
-| SC-011 | Un token con `aud=identity-api` se rechaza en una configuración de consumidor sin esa audiencia. |
-| SC-012 | No existe endpoint de contacto ajeno y userinfo solo devuelve datos propios. |
+| Criterio | Comprobación | Tareas que lo cubren |
+| --- | --- | --- |
+| SC-001 | Un consumidor completa la guía y obtiene `200` de `/me` en 15 minutos o menos. | T024, T058, T065 |
+| SC-002 | Las 19 operaciones tienen ejemplo de éxito (`examples` o `x-success-example`) y prueba de error; CI en verde. | T019, T052, T056 |
+| SC-003 | Cambiar emisor, cliente y claves no requiere cambios en el código de negocio del consumidor (prueba de humo). | T072; T055 aporta la mitigación de proveedor |
+| SC-004 | Los errores devuelven el código y esquema documentados, sin trazas ni secretos. | T018, T033, T034, T068 |
+| SC-005 | El flujo Playwright pasa en Chromium en cada PR y en otro navegador en la ejecución programada. | T053, T056, T057 |
+| SC-006 | El documento valida como OpenAPI 3.1 y no tiene rupturas sin versión ni nota de migración. | T020, T023, T056 |
+| SC-007 | `/me` responde con p95 inferior a 200 ms en local, excluido el primer arranque. | T061 |
+| SC-008 | El selector pasa las comprobaciones de accesibilidad y se usa solo con teclado. | T029, T054 |
+| SC-009 | El escaneo de secretos no encuentra claves privadas, contraseñas ni tokens reales. | T006, T066 |
+| SC-010 | La revocación de sesión/refresh se refleja en la siguiente validación de G1; el access token deja de aceptarse como máximo al expirar su TTL. Se miden por separado. | T026, T040, T041 |
+| SC-011 | El access token usa `aud=identity-api` y el ID token `aud=client_id`; un consumidor sin esa audiencia configurada rechaza el token. | T026, T067 |
+| SC-012 | No existe endpoint de contacto ajeno y userinfo solo devuelve los datos del usuario autenticado. | T052, T071 |
 
 ## 13. Problemas frecuentes
 
@@ -251,4 +252,4 @@ Resultado esperado: sin errores de validación y sin rupturas no versionadas.
 - El registro real, contraseñas, verificación, recuperación o 2FA.
 - La persistencia relacional, migraciones o copias de seguridad.
 - La revocación inmediata de access tokens JWT en módulos externos.
-- La matriz definitiva de audiencias (D-016) ni el modo BFF/SPA (D-001).
+- La matriz definitiva de audiencias (D-016), el modo BFF/SPA (D-001) ni la política de consentimiento de producción (D-012).

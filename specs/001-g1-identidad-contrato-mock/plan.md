@@ -17,6 +17,7 @@ La autorización se resuelve con códigos estables de rol y permiso; G1 no inter
 **Language/Version**: C# 14 sobre .NET 10.0 (`net10.0`), SDK 10.0.404; TypeScript 5.x + React con Vite para el selector de personas; Node.js LTS solo como entorno de build del frontend.
 
 **Primary Dependencies**:
+
 - ASP.NET Core Minimal APIs (.NET 10).
 - `OpenIddict.AspNetCore` 7.8.0 y `OpenIddict.EntityFrameworkCore` 7.8.0.
 - `Microsoft.EntityFrameworkCore.InMemory` 10.0.15.
@@ -37,6 +38,7 @@ La autorización se resuelve con códigos estables de rol y permiso; G1 no inter
 **Performance Goals**: `/me` con p95 inferior a 200 ms en local, excluido el primer arranque; pruebas de contrato por debajo de 5 minutos; E2E por debajo de 10 minutos en CI estándar.
 
 **Constraints**:
+
 - Solo Authorization Code + PKCE S256; prohibidos implicit flow, password grant, `client_credentials` para identidad de usuario y `code_challenge_method=plain`.
 - Sin introspección en v1; los access tokens JWT expiran por TTL (5 min por defecto).
 - Sin endpoint de contacto de terceros; `/connect/userinfo` solo devuelve datos del usuario autenticado (D-017).
@@ -46,7 +48,7 @@ La autorización se resuelve con códigos estables de rol y permiso; G1 no inter
 - Sin secretos, contraseñas fijas ni datos personales reales en el repositorio.
 - Este comando de planificación no genera código de aplicación: la implementación del mock se ejecutará solo tras la aprobación del plan y de las excepciones pendientes.
 
-**Scale/Scope**: 18 personas ficticias, 10 roles, 3 permisos de G1, 7 rutas OIDC/OAuth (8 operaciones), 9 rutas de identidad y 2 rutas de mock; 19 operaciones documentadas en 18 rutas, más la página del selector de personas.
+**Scale/Scope**: 15 personas ficticias más 4 casos de token, 10 roles, 3 permisos de G1, 7 rutas OIDC/OAuth (8 operaciones), 9 rutas de identidad y 2 rutas de mock; 19 operaciones documentadas en 18 rutas, más la página del selector de personas.
 
 ## Constitution Check
 
@@ -91,7 +93,7 @@ La autorización se resuelve con códigos estables de rol y permiso; G1 no inter
 | D-004: vigencias de desarrollo/pruebas | Sesión con inactividad de 30 min y absoluta de 12 h; access/ID token de 5 min; código de 5 min; refresh rotativo de 8 h; tolerancia de 2 min. Todos configurables. |
 | D-005: sin introspección en v1 | El contrato no publica `/connect/introspect`; la revocación de sesión/refresh se prueba separada del TTL del JWT. |
 | D-017: sin contacto de terceros | No existe endpoint de contacto; `/connect/userinfo` solo devuelve datos del usuario autenticado; G4 obtiene contactos de G3. |
-| D-001, D-012 y D-016: abiertas | El contrato admite cookie y Bearer, no decide BFF/SPA, no muestra consentimiento explícito en el mock y declara `aud=identity-api` como provisional; no se decide la matriz definitiva de audiencias. |
+| D-001, D-012 y D-016: abiertas | El contrato admite cookie y Bearer, no decide BFF/SPA. El consentimiento del mock es una simulación configurable y documentada que no decide D-012. `aud=identity-api` es provisional para access tokens; el ID token usa `aud=client_id`; no se decide la matriz definitiva de audiencias. |
 
 ## Project Structure
 

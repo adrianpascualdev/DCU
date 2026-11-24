@@ -78,6 +78,7 @@ Al finalizar esta especificación debe existir:
 - El contrato debe incluir `sessionId` y el claim `sid` para que la revocación de sesiones sea implementable en la fase B.
 - El contrato debe incluir la versión y la política de cambios incompatibles desde el primer día.
 - El contrato debe poder añadir introspección en una versión posterior sin romper a los consumidores, pero no la publica en v1.
+- El mock no decide D-001, D-012 ni D-016: cookies y Bearer son modos configurables, el comportamiento de consentimiento se declara como simulación temporal sin cerrar la decisión y la audiencia `identity-api` queda marcada como provisional.
 
 ## 3. Escenarios de usuario y pruebas
 
@@ -110,7 +111,7 @@ Como desarrollador consumidor, quiero obtener una sesión del mock usando el mis
 2. **Dado** un código válido y su `code_verifier`, **cuando** llamo a `/connect/token`, **entonces** recibo `access_token`, `id_token`, `refresh_token` cuando se solicitó `offline_access`, `token_type`, `expires_in` y `scope`.
 3. **Dado** un `code_verifier` incorrecto o un código ya usado, **cuando** intento canjearlo, **entonces** recibo `invalid_grant` y ningún token.
 4. **Dado** el token de acceso, **cuando** llamo a `/api/v1/identity/me`, **entonces** recibo `userId`, `roles`, `permissions`, `sessionId`, `authenticatedAt` y `expiresAt`.
-5. **Dado** el token de identidad, **cuando** valido emisor, audiencia `identity-api`, firma con JWKS y `nonce`, **entonces** la validación es correcta.
+5. **Dado** el token de identidad, **cuando** valido emisor, audiencia `client_id`, firma con JWKS y `nonce`, **entonces** la validación es correcta; el access token se valida con `aud=identity-api`.
 6. **Dado** un refresh token válido, **cuando** lo canjeo, **entonces** recibo un nuevo access token y un refresh token rotado, y el refresh anterior deja de ser aceptado.
 
 ### US3 — Autorización por rol y permiso, con errores explícitos (P1)
@@ -254,8 +255,8 @@ Como responsable de calidad, quiero que el contrato, el mock y el flujo de naveg
 - **FR-030**: El mock DEBE admitir únicamente Authorization Code con PKCE S256; DEBE rechazar implicit flow, password grant, `code_challenge_method=plain` y cualquier concesión no prevista.
 - **FR-031**: El mock DEBE ofrecer un selector de personas accesible y, solo en desarrollo, el parámetro `mock_persona` para automatización.
 - **FR-032**: El mock DEBE publicar `GET /api/v1/identity/mock/personas` con al menos las personas y estados del apartado 5.5.
-- **FR-033**: El mock DEBE ofrecer `POST /api/v1/identity/mock/reset` para restaurar fixtures, sesiones y tokens; DEBE estar deshabilitado fuera de desarrollo y pruebas.
-- **FR-034**: El mock DEBE emitir tokens JWT firmados con una clave de desarrollo, con `iss`, `aud` (`identity-api` provisional), `sub`, `exp`, `iat`, `nbf`, `jti`, `sid`, roles, permisos y estado de verificación.
+- **FR-033**: El mock DEBE ofrecer `POST /api/v1/identity/mock/reset` para restaurar fixtures, sesiones y tokens; DEBE estar deshabilitado fuera de desarrollo y pruebas. En v1 NO usa token de reset: solo está disponible en `Development`/`Testing` y devuelve `404` en otros entornos.
+- **FR-034**: El mock DEBE emitir tokens JWT firmados con una clave de desarrollo. El access token DEBE incluir `iss`, `aud=identity-api` (provisional), `sub`, `exp`, `iat`, `nbf`, `jti`, `sid`, roles, permisos y estado de verificación; el ID token DEBE incluir `aud=client_id`, `sub`, `nonce`, `auth_time` y `sid`, según OIDC. La distinción de audiencia DEBE documentarse y probarse por tipo de token.
 - **FR-035**: El mock DEBE permitir simular token caducado, revocado, con audiencia incorrecta y con firma inválida, sin crear una vía de autorización alternativa.
 - **FR-036**: El mock NO DEBE exponer una vía de emisión de tokens fuera de `/connect/token`, ni contraseñas fijas en el código, ni secretos reales; la selección de persona en desarrollo no sustituye al canje de código con PKCE.
 - **FR-037**: El mock DEBE ser sustituible por el servidor real cambiando la configuración del emisor, las credenciales del cliente y las claves, sin cambios en el código de negocio del consumidor.
@@ -310,7 +311,7 @@ Estas restricciones provienen de la constitución y del mandato del usuario; no 
 - .NET 10.0 y C# 14 con ASP.NET Core Minimal APIs.
 - React + TypeScript para la interfaz web, con build y despliegue independientes.
 - OpenAPI + Swagger UI.
-- Entity Framework Core InMemory para la persistencia académica, con las limitaciones del ADR-0002.
+- Entity Framework Core InMemory para la persistencia académica, con `DisableBulkOperations()` y las limitaciones del ADR-0002. ADR-0002 sigue pendiente de ratificación formal: esta especificación no autoriza a ejecutar la implementación hasta que se ratifique.
 - xUnit para backend y Playwright para navegador.
 - Servidor OAuth 2.0/OIDC propio, sin proveedores externos, cuando se implemente la fase B.
 - ASP.NET Core Identity para usuarios y contraseñas, y OpenIddict para OAuth 2.0/OIDC, cuando se implemente la fase B.
@@ -369,10 +370,12 @@ No se publica ningún endpoint de contacto de terceros en v1. `/connect/userinfo
 
 | Método | Ruta | Autenticación | Propósito | Éxito | Errores principales |
 | --- | --- | --- | --- | --- | --- |
-| GET | `/api/v1/identity/mock/personas` | Ninguna en desarrollo | Personas y estados disponibles | 200 | 404 fuera de desarrollo |
-| POST | `/api/v1/identity/mock/reset` | Token de reset si está configurado | Restaurar fixtures | 204 | 401, 404 fuera de desarrollo |
+| GET | `/api/v1/identity/mock/personas` | Ninguna en `Development`/`Testing` | Personas y estados disponibles | 200 | 404 en otros entornos |
+| POST | `/api/v1/identity/mock/reset` | Ninguna en `Development`/`Testing` | Restaurar fixtures | 204 | 404 en otros entornos |
 
 #### Fixtures mínimos del mock
+
+El conjunto normativo contiene **15 personas ficticias** y **4 casos de token** (`token.expired`, `token.revoked`, `token.wrong-audience`, `token.invalid-signature`). Las claves `token.*` no son personas: son escenarios reproducibles que se emiten únicamente a través de `/connect/token`.
 
 | Clave | Rol principal | Estado | Caso que cubre |
 | --- | --- | --- | --- |
@@ -453,7 +456,7 @@ Cualquier permiso no concedido explícitamente se deniega. El ámbito de los per
 - **Idempotencia**: logout, revocación y reset son idempotentes; repetir la operación no cambia el resultado observable.
 - **Versionado**: cambios aditivos dentro de `v1`; cambios incompatibles requieren `v2`, nota de migración y periodo de convivencia.
 - **Compatibilidad**: los consumidores deben ignorar campos desconocidos y tratar códigos desconocidos como no concedidos.
-- **Audiencia y scopes (provisional)**: los tokens de G1 usan `aud=identity-api` y los scopes `openid`, `profile`, `email`, `offline_access` e `identity.api`. `identity.api` autoriza la API de identidad de G1, no las APIs de G2, G3 o G4. Cada API consumidora DEBE validar `aud` y aplicar su propia política de autorización; la aceptación de `identity-api` por otros módulos queda pendiente de D-016. Los scopes no sustituyen a los permisos: la autorización fina se resuelve con la matriz de permisos.
+- **Audiencia y scopes (provisional)**: el access token de G1 usa `aud=identity-api` y el ID token usa `aud=client_id`; los scopes son `openid`, `profile`, `email`, `offline_access` e `identity.api`. `identity.api` autoriza la API de identidad de G1, no las APIs de G2, G3 o G4. Cada API consumidora DEBE validar `aud` y aplicar su propia política de autorización; la aceptación de `identity-api` por otros módulos queda pendiente de D-016. Los scopes no sustituyen a los permisos: la autorización fina se resuelve con la matriz de permisos.
 - **Catálogos**: las respuestas de roles y permisos incluyen `catalogVersion` y `provisional`; un código desconocido se trata como no concedido.
 
 ### 5.7 Modelo de errores
@@ -564,7 +567,7 @@ Los detalles de versión, compatibilidad y limitaciones están en `docs/g1/diagn
 - **SC-008**: El selector de personas del mock pasa las comprobaciones automáticas de accesibilidad y se puede usar solo con teclado.
 - **SC-009**: El escaneo de secretos no encuentra claves privadas, contraseñas ni tokens reales en el repositorio.
 - **SC-010**: La revocación de una sesión o refresh token se refleja en la siguiente validación de G1; el access token emitido deja de aceptarse como máximo al expirar su TTL (5 min por defecto). La prueba mide ambos plazos por separado y no exige revocación inmediata del JWT.
-- **SC-011**: El contrato declara `aud=identity-api` y los scopes acordados; una API consumidora que no tenga una decisión de audiencia explícita rechaza el token. La comprobación se documenta en la guía y se cubre con una prueba de configuración.
+- **SC-011**: El contrato declara `aud=identity-api` para el access token, `aud=client_id` para el ID token y los scopes acordados; una API consumidora que no tenga una decisión de audiencia explícita rechaza el access token. La comprobación se documenta en la guía y se cubre con una prueba de configuración.
 - **SC-012**: Ninguna respuesta de G1 expone correo, teléfono ni datos de contacto de terceros; `/connect/userinfo` solo devuelve los datos del usuario autenticado. Se cubre con una prueba de contrato que confirma que no existe endpoint de contacto ajeno y que userinfo ignora cualquier identificador de otro usuario.
 
 ### 6.2 Métodos de validación
@@ -575,7 +578,7 @@ Los detalles de versión, compatibilidad y limitaciones están en `docs/g1/diagn
 - Revisión manual de la guía de consumo por un consumidor de otro módulo.
 - Escaneo de secretos y revisión de logs de ejemplo.
 - Prueba de sustitución del mock por una configuración de emisor distinta.
-- Prueba de audiencia: un token con `aud=identity-api` se acepta en G1 y se rechaza en una configuración de consumidor que no declare esa audiencia.
+- Prueba de audiencia: un access token con `aud=identity-api` se acepta en G1 y se rechaza en una configuración de consumidor que no declare esa audiencia; el ID token se valida con `aud=client_id`.
 - Comprobación de que `/connect/introspect` no está publicado en v1 ni en el mock.
 - Comprobación de que no existe endpoint de contacto de terceros y de que `/connect/userinfo` solo devuelve los datos del usuario autenticado.
 - Medición separada de la revocación de sesión/refresh y de la expiración del access token por TTL.
@@ -611,7 +614,7 @@ Las decisiones se registran también en `docs/decisions/pending-decisions.md`. L
 | D-009 | Persistencia definitiva y migración desde InMemory | InMemory no cumple migraciones ni producción | SQLite o SQL Server/PostgreSQL antes de datos reales; ver ADR-0002 | Producción |
 | D-010 | Proveedores de correo y SMS | Necesarios para verificación y recuperación | Encapsular y elegir proveedor antes de la fase B | Fase B |
 | D-011 | Alojamiento, TLS, gestión de claves y key ring | Sin claves persistentes las sesiones se invalidan al reiniciar | Gestionar claves fuera del repositorio y persistir el key ring | Producción |
-| D-012 | Consentimiento de módulos de primera parte | Afecta a UX y al modelo de autorización | Implícito y documentado para primera parte; explícito para terceros | Fase B |
+| D-012 | Consentimiento de módulos de primera parte | Afecta a UX y al modelo de autorización | Abierta. El mock solo declara un modo de simulación configurable y NO decide el comportamiento de producción | Fase B |
 | D-013 | Eliminación y anonimización de cuentas | RGPD y auditoría | Definir tombstone, anonimización y conservación mínima | Fase B |
 | D-014 | Política de deprecación de versiones | Los módulos necesitan tiempo de migración | Ventana mínima de un semestre o la duración del curso | Fase B |
 | D-015 | Multi-club o multi-tenancy | Cambia el modelo de identidad y los ámbitos | Fuera de alcance inicial; no diseñar para múltiples clubes sin requisito | Futuro |
@@ -624,7 +627,7 @@ D-002, D-003, D-004, D-005 y D-017 quedan cerradas para la fase A en el alcance 
 
 ### 9.1 Dependencias
 
-- Aprobación de esta especificación y de los ADR-0001 y ADR-0002.
+- Aprobación de esta especificación. ADR-0002 bloquea la implementación de la fase A hasta su ratificación formal. ADR-0001 bloquea la arquitectura de la fase B, pero no impide el mock de fase A con OpenIddict como motor temporal.
 - Ratificación de D-001, D-004 (valores de producción), D-005 (revocación de access tokens) y D-016 (audiencias) antes de la fase B; D-002 y D-003 quedan aprobadas para la fase A, con la verificación de ámbitos de D-003 en la fase C.
 - Disponibilidad de .NET SDK 10.0.404 y de los paquetes verificados.
 - Coordinación con G2, G3 y G4 para la validación del catálogo provisional y la matriz de audiencias.
@@ -650,7 +653,7 @@ D-002, D-003, D-004, D-005 y D-017 quedan cerradas para la fase A en el alcance 
 
 ## 10. Fuera de alcance
 
-- Implementación del servidor OAuth real, Identity, OpenIddict y EF Core InMemory en esta fase.
+- Implementación del servidor OAuth real y de ASP.NET Core Identity para usuarios reales en esta fase. El mock usa OpenIddict y EF Core InMemory como motor académico temporal, sin usuarios reales ni persistencia de producción.
 - Interfaz de administración de usuarios, roles y permisos.
 - Registro, recuperación de contraseña, verificación de correo o teléfono y 2FA reales.
 - Endpoints de negocio de G2, G3 y G4.
@@ -668,7 +671,7 @@ D-002, D-003, D-004, D-005 y D-017 quedan cerradas para la fase A en el alcance 
 | FR-007 a FR-012 | US2, US3 | Pruebas de contrato de `/me` y E2E de sesión |
 | FR-013 a FR-017 | US3 | Pruebas de resumen, lote y denegación |
 | FR-018 a FR-024 | US4 | Pruebas de sesiones, logout, revocación de sesión/refresh y expiración de access token |
-| FR-025 a FR-028 | US5 | Pruebas de catálogo, matriz provisional y tolerancia a códigos desconocidos |
+| FR-025 a FR-028 | US3 | Pruebas de catálogo, matriz provisional y tolerancia a códigos desconocidos |
 | FR-029 a FR-037 | US2, US5 | Pruebas del mock, PKCE, refresco y fixtures |
 | FR-038 a FR-045 | US3, US4 | Pruebas de errores, CORS, rate limit y auditoría |
 | FR-046 a FR-052 | US6 | CI, Playwright y revisión de documentación |
@@ -679,7 +682,7 @@ D-002, D-003, D-004, D-005 y D-017 quedan cerradas para la fase A en el alcance 
 ## 12. Glosario
 
 - **Authorization Code + PKCE**: flujo OAuth 2.0 en el que el cliente obtiene un código y lo canjea con un verificador de prueba; obligatorio en esta solución.
-- **Audiencia**: valor `aud` de un token que identifica la API destinataria; en v1 es `identity-api` de forma provisional.
+- **Audiencia**: valor `aud` de un token que identifica la destinataria; en v1 es `identity-api` de forma provisional en el access token y `client_id` en el ID token.
 - **BFF**: backend for frontend; capa de servidor que mantiene los tokens fuera del navegador y usa cookies de sesión.
 - **Claim**: afirmación incluida en un token, como `sub`, `sid`, rol o permiso.
 - **InMemory**: proveedor de EF Core que guarda datos en memoria y los pierde al reiniciar; solo para desarrollo, demostración y pruebas.

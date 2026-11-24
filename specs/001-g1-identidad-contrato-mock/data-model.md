@@ -2,7 +2,7 @@
 
 **Feature**: `001-g1-identidad-contrato-mock` | **Fecha**: 2026-11-24
 
-Modelo de datos del mock de identidad. No es el modelo definitivo de producción: describe las entidades necesarias para que el contrato sea ejecutable y verificable en la fase A. El modelo es agnóstico del proveedor y se implementa con EF Core InMemory según ADR-0002.
+Modelo de datos del mock de identidad. No es el modelo definitivo de producción: describe las entidades necesarias para que el contrato sea ejecutable y verificable en la fase A. El modelo es agnóstico del proveedor y se implementa con EF Core InMemory según ADR-0002, **pendiente de ratificación formal**; esta condición bloquea la ejecución de las tareas de implementación, no la edición documental.
 
 Convenciones generales:
 
@@ -166,7 +166,7 @@ Cliente OAuth registrado en el mock.
 | `postLogoutRedirectUris` | string[] | Sí | Coincidencia exacta. |
 | `permissions` | string[] | Sí | Endpoints y grants permitidos por OpenIddict. |
 | `requirements` | string[] | Sí | PKCE obligatorio; sin implicit ni password. |
-| `consentType` | enum | Sí | `implicit` en el mock v1; la decisión D-012 para la fase B sigue abierta. |
+| `consentType` | enum | Sí | Configurable en el mock como simulación temporal; D-012 sigue abierta y no se decide el comportamiento de producción. |
 | `scopes` | string[] | Sí | `openid`, `profile`, `email`, `offline_access`, `identity.api`. |
 
 **Invariantes**:
@@ -189,7 +189,7 @@ Concesión de un cliente para una persona y unos scopes.
 | `expiresAt` | datetime? | No | Si aplica. |
 | `status` | enum | Sí | `valid`, `revoked`. |
 
-**Invariantes**: el mock v1 no muestra pantalla de consentimiento; la decisión D-012 sobre el consentimiento de primera parte en la fase B sigue abierta y no se resuelve aquí.
+**Invariantes**: el mock v1 declara el consentimiento como simulación configurable y no muestra una pantalla que comprometa una decisión; D-012 sigue abierta y no se resuelve aquí.
 
 ### 1.9 Token y SessionToken
 
@@ -263,7 +263,9 @@ erDiagram
 
 ## 3. Fixtures mínimos
 
-El conjunto se publica en `GET /api/v1/identity/mock/personas` y es determinista. La tabla completa está en la especificación (5.5); el modelo debe soportar al menos:
+El conjunto normativo se publica en `GET /api/v1/identity/mock/personas` y es determinista. Está formado por **15 personas ficticias** y **4 casos de token**. La tabla completa está en la especificación (5.5); las claves `token.*` son escenarios reproducibles, **no personas**, y no se publican como `MockPersona`.
+
+**Personas (15)**:
 
 | Clave | Rol principal | Estado | Caso |
 | --- | --- | --- | --- |
@@ -278,20 +280,26 @@ El conjunto se publica en `GET /api/v1/identity/mock/personas` y es determinista
 | `supporter.fan` | `supporter` | Activo, verificado | Simpatizante |
 | `kit.staff` | `kit_staff` | Activo, verificado | Material de G4 |
 | `comms.staff` | `communications_staff` | Activo, verificado | Comunicaciones de G4 |
-| `user.no-role` | — | Activo, verificado | Sin permisos |
-| `user.unverified` | `member` | Correo sin verificar | Permisos limitados |
+| `user.no-role` | Ninguno | Activo, verificado | Sin permisos |
+| `user.unverified` | `member` | Activo, correo sin verificar | Permisos limitados |
 | `user.inactive` | `member` | Inactivo | Error genérico |
 | `user.locked` | `member` | Bloqueado | Error genérico |
-| `token.expired` | `coach` | Token caducado | Sesión inválida |
-| `token.revoked` | `coach` | Token revocado | Revocación simulada |
-| `token.wrong-audience` | `coach` | Audiencia incorrecta | Validación de audiencia |
-| `token.invalid-signature` | `coach` | Firma inválida | Validación de firma |
+
+**Casos de token (4, no personas)**:
+
+| Clave | Subyacente | Condición simulada | Caso que cubre |
+| --- | --- | --- | --- |
+| `token.expired` | `coach` | `exp` vencido | Sesión inválida |
+| `token.revoked` | `coach` | Refresh revocado | Revocación simulada en el mock |
+| `token.wrong-audience` | `coach` | `aud` distinta de `identity-api` | Validación de audiencia |
+| `token.invalid-signature` | `coach` | Firma alterada | Validación de firma |
 
 **Reglas de fixtures**:
 
 - El seeding es idempotente y se ejecuta al arrancar y en `POST /api/v1/identity/mock/reset`.
+- `mock/reset` no usa token en v1: solo existe en `Development`/`Testing` y devuelve `404` en otros entornos.
 - El reset elimina sesiones, tokens, autorizaciones y eventos, y vuelve a sembrar personas y asignaciones.
-- Los tokens de los casos `token.*` se generan con el mismo emisor y claves de desarrollo; no abren una vía de autorización alternativa.
+- Los tokens de los casos `token.*` se emiten únicamente a través de `/connect/token` con el mismo emisor y claves de desarrollo; no abren una vía de autorización alternativa.
 - Las personas `inactive` y `locked` no revelan su estado en el error de autenticación.
 
 ## 4. Reglas de validación derivadas de requisitos
@@ -304,6 +312,8 @@ El conjunto se publica en `GET /api/v1/identity/mock/personas` y es determinista
 | Solo PKCE S256; rechazo de `plain`, implicit y password | FR-030 |
 | `state` y `nonce` obligatorios en el flujo | US2, 4 |
 | Tolerancia de reloj máxima 2 min | D-004 |
+| Access token con `aud=identity-api`; ID token con `aud=client_id` | FR-034, SC-011 |
+| `mock/reset` sin token, solo en `Development`/`Testing` | FR-033 |
 | `Cache-Control: no-store` en identidad y sesiones | FR-012 |
 | `ETag` en catálogos | 5.6 |
 | Denegación por defecto y códigos desconocidos como no concedidos | FR-028, 5.5 |

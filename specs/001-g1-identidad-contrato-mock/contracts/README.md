@@ -3,6 +3,7 @@
 - **Propietario**: equipo G1 (Infraestructura).
 - **Consumidores**: G2 (Gestión Deportiva), G3 (Socios y Cuotas) y G4 (Comunicaciones y Equipaciones).
 - **Estado**: contrato de la fase A, ejecutado por el mock de identidad. No es todavía el servidor OAuth real.
+- **Fecha de revisión**: 2026-11-24.
 - **Especificación**: [`../spec.md`](../spec.md).
 - **Documento normativo**: [`openapi.v1.yaml`](./openapi.v1.yaml), OpenAPI 3.1.
 
@@ -10,7 +11,7 @@
 
 1. La superficie OIDC/OAuth observable: descubrimiento, JWKS, autorización, token, userinfo, revocación y logout.
 2. La API de identidad que consumen G2, G3 y G4: `/me`, resumen y lote de usuarios, sesiones, logout y catálogos.
-3. Los endpoints exclusivos de desarrollo: personas y reset del mock.
+3. Los endpoints exclusivos de desarrollo: personas y reset del mock. `mock/reset` no usa token en v1: solo existe en `Development`/`Testing` y devuelve `404` en otros entornos.
 
 No cubre: registro real, contraseñas, verificación real, recuperación, 2FA, administración de usuarios, introspección, datos de negocio de otros módulos ni contacto de terceros.
 
@@ -73,10 +74,11 @@ Los errores OAuth usan el formato estándar y no reutilizan estos códigos:
 - `openapi.v1.yaml` es la copia normativa revisable; CI comprueba que no diverge del runtime.
 - Swagger UI se sirve en `/swagger` solo en desarrollo y pruebas.
 - La validación de respuestas usa el esquema OpenAPI 3.1 con `JsonSchema.Net`.
+- Las respuestas sin cuerpo (`204`, RFC 7009 `200` vacío, redirecciones) documentan su ejemplo de éxito con la extensión `x-success-example`; las respuestas con cuerpo usan `examples` estándar. Así las 19 operaciones tienen ejemplo de éxito y de error sin inventar cuerpos para respuestas vacías.
 
 ## 8. Claims de los tokens
 
-El contrato no decodifica los JWT, pero los consumidores necesitan conocer sus claims.
+El contrato no decodifica los JWT, pero los consumidores necesitan conocer sus claims. La audiencia depende del tipo de token: el access token se emite para `identity-api` y el ID token para el `client_id` que inició el flujo. No se usa una sola audiencia para ambos.
 
 **Access token**:
 

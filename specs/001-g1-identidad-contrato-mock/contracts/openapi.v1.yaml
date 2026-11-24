@@ -5,6 +5,8 @@ info:
   title: G1 Identity API
   version: 1.0.0
   summary: Contrato de identidad y mock para G2, G3 y G4 (fase A)
+  x-reviewed-at: 2026-11-24
+  x-persistence-exception: "ADR-0002 pendiente de ratificación formal; EF Core InMemory es solo académico."
   description: |
     Contrato OpenAPI 3.1 de la API de identidad de G1 y de la superficie OIDC/OAuth
     observable del mock de la fase A.
@@ -15,8 +17,9 @@ info:
       ni introspección en v1.
     - `/me` devuelve roles y permisos efectivos; G1 no interpreta ámbitos de negocio.
     - No existe endpoint de contacto de terceros.
-    - La audiencia `identity-api` es provisional y no autoriza por sí misma el acceso
-      a G2, G3 o G4.
+    - La audiencia del access token es `identity-api` (provisional, D-016) y no
+      autoriza por sí misma el acceso a G2, G3 o G4; el ID token usa `aud=client_id`.
+      Los consumidores validan cada tipo de token con su audiencia correspondiente.
 
     El mock se ejecuta solo en desarrollo y pruebas. Los datos son ficticios y se
     pierden al reiniciar.
@@ -317,6 +320,10 @@ paths:
       responses:
         '200':
           description: Token revocado o ya inválido; respuesta vacía.
+          x-success-example:
+            httpStatus: 200
+            body: null
+            note: "Respuesta vacía según RFC 7009."
         '400':
           $ref: '#/components/responses/OAuthBadRequest'
         '401':
@@ -363,8 +370,16 @@ paths:
               schema:
                 type: string
                 format: uri
+          x-success-example:
+            httpStatus: 302
+            headers:
+              Location: https://localhost:5180/post-logout
+            body: null
         '204':
           description: Sesión cerrada sin redirección.
+          x-success-example:
+            httpStatus: 204
+            body: null
         '400':
           $ref: '#/components/responses/OAuthBadRequest'
         '429':
@@ -388,8 +403,16 @@ paths:
               schema:
                 type: string
                 format: uri
+          x-success-example:
+            httpStatus: 302
+            headers:
+              Location: https://localhost:5180/post-logout
+            body: null
         '204':
           description: Sesión cerrada sin redirección.
+          x-success-example:
+            httpStatus: 204
+            body: null
         '400':
           $ref: '#/components/responses/OAuthBadRequest'
         '429':
@@ -580,6 +603,10 @@ paths:
       responses:
         '204':
           description: Sesión revocada o ya inexistente.
+          x-success-example:
+            httpStatus: 204
+            body: null
+            note: "Operación idempotente; repetirla no cambia el resultado observable."
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -609,6 +636,10 @@ paths:
       responses:
         '204':
           description: Sesiones revocadas.
+          x-success-example:
+            httpStatus: 204
+            body: null
+            note: "Con keepCurrentSession=true la sesión actual permanece activa."
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -628,6 +659,10 @@ paths:
       responses:
         '204':
           description: Sesión cerrada.
+          x-success-example:
+            httpStatus: 204
+            body: null
+            note: "Los access tokens ya emitidos siguen válidos hasta su exp."
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
@@ -763,8 +798,10 @@ paths:
       responses:
         '204':
           description: Fixtures restaurados.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          x-success-example:
+            httpStatus: 204
+            body: null
+            note: "Disponible solo en Development/Testing; sin token de reset en v1."
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1330,6 +1367,7 @@ components:
       properties:
         access_token:
           type: string
+          description: JWT firmado con `aud=identity-api` (provisional, D-016), `sid`, roles y permisos. No contiene datos de terceros.
         token_type:
           type: string
           enum: [Bearer]
@@ -1338,8 +1376,10 @@ components:
           minimum: 1
         refresh_token:
           type: string
+          description: Refresh token opaco con rotación e invalidación del anterior.
         id_token:
           type: string
+          description: JWT firmado con `aud=client_id` y `nonce`; no incluye roles, permisos ni datos de terceros.
         scope:
           type: string
 
