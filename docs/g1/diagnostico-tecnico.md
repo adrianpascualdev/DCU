@@ -263,9 +263,10 @@ La validación local con JWKS es la opción por defecto por latencia y desacopla
 - **Permisos**: códigos atómicos con espacio de nombres por módulo, por ejemplo `identity.users.summary.read`, `sports.attendance.manage`, `members.fees.read` o `communications.news.publish`.
 - **Matriz rol-permiso**: deny-by-default. Un rol concede permisos explícitos; un permiso no listado se deniega.
 - **Asignación**: cada asignación registra actor, objetivo, rol, ámbito opaco, fecha y motivo. Se puede revocar y queda auditada.
-- **Ámbitos**: G1 no interpreta los ámbitos de negocio. Si un rol es de equipo, G2 resuelve el equipo con `userId` y sus propios datos. G1 puede transportar una referencia opaca, pero no la valida como regla de G2. D-003 debe cerrar el modelo.
+- **Ámbitos**: G1 no interpreta los ámbitos de negocio. Si un rol es de equipo, G2 resuelve el equipo con `userId` y sus propios datos. G1 puede transportar una referencia opaca, pero no la valida como regla de G2. D-003 queda cerrada para la fase A con este modelo (2026-11-24); la verificación con G2 corresponde a la fase C.
 - **Tokens**: los permisos efectivos pueden viajar en el token para evitar una consulta por petición. Si el usuario pierde un rol, el token anterior sigue vigente hasta su expiración; la ventana debe documentarse o cubrirse con introspección.
 - **Consumidores**: deben ignorar permisos desconocidos y no conceder por defecto. Un permiso nuevo no debe romper un cliente antiguo.
+- **Contacto**: G1 solo expone el contacto del usuario autenticado en `/me` y `/connect/userinfo` (scope `email`); no hay endpoint de contacto de terceros ni directorio. G4 obtiene los contactos de G3 (D-017, 2026-11-24). Cualquier ampliación futura exige permiso, auditoría y consentimiento de tutor para menores.
 
 ### 6.5 Sesiones
 
@@ -411,10 +412,10 @@ Estas limitaciones contradicen la restricción técnica 4 y el principio V. El A
 El registro completo está en `docs/decisions/pending-decisions.md`. Las que bloquean la fase B son:
 
 - **D-001**: BFF con cookies o SPA pública con tokens.
-- **D-002**: catálogo de roles y matriz de permisos.
-- **D-003**: ámbitos de rol y propiedad.
-- **D-004**: duración de tokens, refresco y sesión.
+- **D-004**: duración de tokens, refresco y sesión (valores de producción).
 - **D-005**: estrategia de revocación.
+
+D-002 y D-003 quedan cerradas para la fase A (catálogo provisional y resolución de ámbitos por el módulo propietario); la ratificación formal del catálogo y la verificación de ámbitos con G2 corresponden a fases posteriores. D-017 también queda cerrada para la fase A: G1 no expone contacto de terceros y G4 lo obtiene de G3; su integración depende del contrato de contacto de G3.
 
 Las que bloquean producción son D-009 (persistencia), D-010 (correo/SMS), D-011 (alojamiento y claves), D-013 (eliminación y anonimización) y D-014 (deprecación).
 
@@ -424,7 +425,7 @@ Las que bloquean producción son D-009 (persistencia), D-010 (correo/SMS), D-011
 
 - Aprobar `specs/001-g1-identidad-contrato-mock/spec.md`.
 - Aprobar el ADR-0001 y el ADR-0002, o sustituir InMemory por SQLite.
-- Ratificar D-001 a D-005 antes de la fase B.
+- Ratificar D-001, D-004 y D-005 antes de la fase B; D-002 y D-003 quedan aprobadas para la fase A, con su validación formal pendiente.
 - Confirmar el catálogo mínimo de roles y permisos con G2, G3 y G4.
 
 ### Fase A: contrato y mock

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-11
 
-**Clarified**: 2026-11-22
+**Clarified**: 2026-11-24
 
 **Status**: Clarified — ready for plan (fase A); decisiones de fase B abiertas
 
@@ -39,6 +39,13 @@ Al finalizar esta especificación debe existir:
 | B. Servidor real | Identity + OpenIddict + InMemory, registro, login, tokens, sesiones y revocación | Especificación posterior |
 | C. Integración real | Sustitución del mock, permisos verificados y E2E de G2/G3/G4 | Especificación posterior |
 
+## Clarifications
+
+### Session 2026-11-24
+
+- Q: ¿Qué información de autorización debe devolver `/me` para que G2, G3 y G4 puedan decidir permisos sin duplicar reglas de identidad? → A: Opción A: `/me` devuelve `roles` y `permissions`; G1 publica códigos estables y cada módulo resuelve sus ámbitos (equipo, categoría, colectivo) con `userId` y sus propios datos. El catálogo mínimo se versiona y se amplía sin romper consumidores.
+- Q: ¿Cómo debe exponer G1 el correo o teléfono de socios y familias que G4 necesita para comunicaciones, sin romper la minimización? → A: Solo autoservicio vía userinfo: G1 no expone datos de contacto de terceros; `/connect/userinfo` devuelve únicamente los datos del usuario autenticado y G4 obtiene los contactos de G3, que los gestiona en la ficha de socio.
+
 ## 2. Alcance
 
 ### 2.1 Incluido
@@ -59,6 +66,7 @@ Al finalizar esta especificación debe existir:
 - El envío real de correo o SMS, la verificación de teléfono y el segundo factor.
 - La recuperación de contraseña y el cambio de contraseña reales.
 - Cualquier dato o endpoint de negocio de G2, G3 o G4.
+- La exposición de datos de contacto de terceros: G1 no actúa como directorio; G4 los obtiene de G3.
 - El despliegue en producción, la gestión real de claves y el endurecimiento de infraestructura.
 - La modificación de la constitución o de sus restricciones técnicas.
 - Cualquier atajo de autorización en el mock que pueda confundirse con una vía válida en producción.
@@ -210,7 +218,7 @@ Como responsable de calidad, quiero que el contrato, el mock y el flujo de naveg
 
 - **FR-007**: `GET /api/v1/identity/me` DEBE devolver `userId`, `displayName`, `email`, `emailVerified`, `phoneVerified`, `roles`, `permissions`, `sessionId`, `authenticatedAt`, `expiresAt` y `authenticationMethods`.
 - **FR-008**: `userId` DEBE ser un identificador opaco, estable y no secuencial; los consumidores DEBEN almacenarlo como referencia y no interpretarlo.
-- **FR-009**: `roles` DEBE contener códigos estables del catálogo de roles; `permissions` DEBE contener los permisos efectivos del usuario, no la matriz completa.
+- **FR-009**: `roles` DEBE contener códigos estables del catálogo de roles; `permissions` DEBE contener los permisos efectivos del usuario, no la matriz completa. G1 NO DEBE interpretar ámbitos de negocio: cada módulo consumidor resuelve su ámbito (equipo, categoría, colectivo) con el `userId` y sus propios datos. G1 PUEDE transportar una referencia de ámbito opaca, pero no la valida como regla del módulo. El catálogo de códigos DEBE estar versionado y DEBE poder ampliarse sin romper a los consumidores.
 - **FR-010**: `/me` DEBE devolver solo el correo del propio usuario y nunca datos de otro usuario.
 - **FR-011**: `/me` DEBE aceptar cookie de sesión o token Bearer según el modo configurado; la respuesta DEBE ser la misma en ambos casos.
 - **FR-012**: `/me` DEBE incluir cabecera `Cache-Control: no-store` y no DEBE cachearse en intermediarios.
@@ -279,6 +287,8 @@ Como responsable de calidad, quiero que el contrato, el mock y el flujo de naveg
 - **FR-054**: El contrato v1 NO DEBE publicar `/connect/introspect` ni el mock DEBE implementarlo. La validación JWT con JWKS NO garantiza revocación inmediata; la introspección podrá añadirse en una versión posterior.
 - **FR-055**: El mock DEBE implementar el grant `refresh_token` con rotación y revocación, y DEBE distinguir en su documentación entre la revocación de sesión/refresh y la expiración de los access tokens.
 - **FR-056**: Las respuestas de `/api/v1/identity/catalog/roles` y `/catalog/permissions` DEBEN incluir `catalogVersion` y `provisional: true` mientras el catálogo v1 no se ratifique. Un cambio de código estable DEBE seguir la política de versionado y no romper a los consumidores.
+- **FR-057**: El contrato v1 NO DEBE exponer el correo, el teléfono ni otros datos de contacto de terceros. `/connect/userinfo` DEBE devolver solo los datos del usuario autenticado: `sub`, `name`, `email` y `email_verified` cuando se conceda el scope `email`. El teléfono no se publica en v1 porque no existe scope `phone`. G4 DEBE obtener los contactos de G3, propietario de la ficha de socio; G1 no actúa como directorio de contacto.
+- **FR-058**: Cualquier ampliación futura de datos de contacto DEBE exigir permiso explícito, minimización, auditoría y consentimiento vigente para menores. No se implementa en la fase A.
 
 ### 5.2 Requisitos no funcionales
 
@@ -312,9 +322,9 @@ La verificación de versiones y la evidencia de compatibilidad se documentan en 
 ### 5.4 Entidades clave
 
 - **Identidad de usuario**: persona única en el club; `userId` opaco, nombre visible, correo, teléfono, estado de verificación, estado activo y marcas de creación y actualización. No contiene datos de negocio de otros módulos.
-- **Rol**: agrupación estable de permisos con código, etiqueta, descripción y ámbito de asignación. El catálogo v1 provisional se define en 5.5 y queda pendiente de validación del equipo.
-- **Permiso**: autorización atómica con código estable, módulo propietario y descripción. La matriz v1 provisional se define en 5.5; los permisos de G2, G3 y G4 los publican sus propietarios.
-- **Asignación de rol**: vínculo entre identidad y rol, con quién la concede, a quién, cuándo, ámbito opaco y motivo. Es auditable y revocable.
+- **Rol**: agrupación estable de permisos con código, etiqueta, descripción y si es asignable. No contiene reglas de ámbito de negocio. El catálogo v1 provisional se define en 5.5 y queda pendiente de validación del equipo.
+- **Permiso**: autorización atómica con código estable, módulo propietario y descripción. La matriz v1 provisional se define en 5.5; los permisos de G2, G3 y G4 los publican sus propietarios y G1 los incorpora al catálogo sin reinterpretarlos.
+- **Asignación de rol**: vínculo entre identidad y rol, con quién la concede, a quién, cuándo y motivo. Es auditable y revocable. Si el módulo propietario necesita ámbito, G1 transporta una referencia opaca sin interpretarla; el módulo resuelve el ámbito con `userId` y sus propios datos.
 - **Sesión**: periodo de autenticación con `sessionId`, usuario, cliente, fechas de creación, último uso y expiración, estado y métodos de autenticación. Se identifica con el claim `sid`.
 - **Aplicación cliente**: cliente OAuth registrado con `clientId`, tipo público o confidencial, URIs de redirección y de logout, permisos, requisitos y tipo de consentimiento.
 - **Autorización o consentimiento**: concesión de un cliente para un usuario y unos ámbitos; puede ser implícita para módulos de primera parte o explícita para terceros.
@@ -352,6 +362,8 @@ La verificación de versiones y la evidencia de compatibilidad se documentan en 
 | POST | `/api/v1/identity/logout` | Cookie o Bearer | Cerrar sesión actual | 204 | 401 |
 | GET | `/api/v1/identity/catalog/roles` | Cookie o Bearer | Catálogo de roles | 200 | 401 |
 | GET | `/api/v1/identity/catalog/permissions` | Cookie o Bearer | Catálogo de permisos | 200 | 401 |
+
+No se publica ningún endpoint de contacto de terceros en v1. `/connect/userinfo` solo devuelve los datos del usuario autenticado y G4 obtiene los contactos de G3 (FR-057).
 
 #### Solo para desarrollo y pruebas
 
@@ -428,7 +440,7 @@ Solo se publican los permisos que G1 posee y puede evaluar. Los permisos de G2, 
 | `kit_staff` | No | No | No |
 | `communications_staff` | No | Sí | No |
 
-Cualquier permiso no concedido explícitamente se deniega. El ámbito de los permisos (por ejemplo, qué deportistas puede consultar un entrenador) se resolverá en D-003; la fase A no aplica ámbitos de módulo. Las respuestas de catálogo DEBEN marcarse con `catalogVersion` y `provisional: true`.
+Cualquier permiso no concedido explícitamente se deniega. El ámbito de los permisos (por ejemplo, qué deportistas puede consultar un entrenador) NO lo resuelve G1: el módulo propietario lo resuelve con el `userId` y sus propios datos, según la respuesta A de la clarificación de 2026-11-24. La fase A no aplica ámbitos de módulo. Las respuestas de catálogo DEBEN marcarse con `catalogVersion` y `provisional: true`.
 
 ### 5.6 Convenciones del contrato
 
@@ -528,10 +540,11 @@ Flujos que la fase B deberá implementar y probar:
 - **Login**: página interactiva de G1 o BFF; Identity valida credenciales y bloqueo; OpenIddict emite código; nunca se expone un endpoint de password grant.
 - **Emisión**: canje de código con PKCE, token de acceso, token de identidad y refresh rotativo; claves asimétricas y JWKS.
 - **Validación**: los módulos validan JWT localmente con JWKS; comprueban emisor, audiencia, firma, expiración y permisos. La introspección no forma parte de v1 y no se presupone revocación inmediata de access tokens.
-- **Roles y permisos**: catálogo provisional v1, matriz explícita, denegación por defecto, asignación auditada y permisos efectivos en el token o resolubles en G1.
+- **Roles y permisos**: catálogo provisional v1, matriz explícita, denegación por defecto, asignación auditada y permisos efectivos en el token o resolubles en G1. G1 no interpreta ámbitos de negocio: cada módulo resuelve su ámbito (equipo, categoría, colectivo) con el `userId` y sus propios datos. El catálogo está versionado y se amplía de forma aditiva sin romper a los consumidores.
 - **Sesiones**: `sid` en los tokens, registro de sesión, expiración por inactividad y absoluta, listado y revocación.
 - **Logout y revocación**: fin de sesión OIDC, revocación de sesión y refresh tokens; los access tokens expiran por TTL. La revocación inmediata de access tokens queda pendiente de D-005.
 - **Refresco**: rotación, detección de reutilización y revocación de la familia.
+- **Datos de contacto**: G1 solo expone el contacto del usuario autenticado en `/me` y `/connect/userinfo` (scope `email`). No hay directorio de contacto ni endpoint de contacto de terceros; G4 obtiene los contactos de G3 y cualquier ampliación futura exige permiso, auditoría y consentimiento de tutor para menores (FR-057, FR-058).
 - **Audiencias**: definir la matriz definitiva de audiencias por API antes de la integración (D-016).
 - **2FA**: TOTP y códigos de recuperación como opción; métodos y obligatoriedad pendientes.
 
@@ -552,6 +565,7 @@ Los detalles de versión, compatibilidad y limitaciones están en `docs/g1/diagn
 - **SC-009**: El escaneo de secretos no encuentra claves privadas, contraseñas ni tokens reales en el repositorio.
 - **SC-010**: La revocación de una sesión o refresh token se refleja en la siguiente validación de G1; el access token emitido deja de aceptarse como máximo al expirar su TTL (5 min por defecto). La prueba mide ambos plazos por separado y no exige revocación inmediata del JWT.
 - **SC-011**: El contrato declara `aud=identity-api` y los scopes acordados; una API consumidora que no tenga una decisión de audiencia explícita rechaza el token. La comprobación se documenta en la guía y se cubre con una prueba de configuración.
+- **SC-012**: Ninguna respuesta de G1 expone correo, teléfono ni datos de contacto de terceros; `/connect/userinfo` solo devuelve los datos del usuario autenticado. Se cubre con una prueba de contrato que confirma que no existe endpoint de contacto ajeno y que userinfo ignora cualquier identificador de otro usuario.
 
 ### 6.2 Métodos de validación
 
@@ -563,6 +577,7 @@ Los detalles de versión, compatibilidad y limitaciones están en `docs/g1/diagn
 - Prueba de sustitución del mock por una configuración de emisor distinta.
 - Prueba de audiencia: un token con `aud=identity-api` se acepta en G1 y se rechaza en una configuración de consumidor que no declare esa audiencia.
 - Comprobación de que `/connect/introspect` no está publicado en v1 ni en el mock.
+- Comprobación de que no existe endpoint de contacto de terceros y de que `/connect/userinfo` solo devuelve los datos del usuario autenticado.
 - Medición separada de la revocación de sesión/refresh y de la expiración del access token por TTL.
 
 ## 7. Supuestos
@@ -587,7 +602,7 @@ Las decisiones se registran también en `docs/decisions/pending-decisions.md`. L
 | --- | --- | --- | --- | --- |
 | D-001 | BFF con cookies o SPA pública con tokens | Cambia el transporte, CSRF, CORS y el almacenamiento de tokens | BFF con cookies `HttpOnly` para el cliente web; el contrato admite ambos | Fase B |
 | D-002 | Catálogo provisional v1 de roles y matriz de permisos | Define los códigos, la autorización real y los fixtures | Aprobado para fase A: catálogo de 10 roles, incluidos `sponsor` y `supporter`, matriz deny-by-default; pendiente de validación del equipo | Ratificación en fase B |
-| D-003 | Ámbitos de rol y propiedad de los ámbitos | G2 posee equipos; G1 no debe duplicar reglas de G2 | G1 emite roles y permisos; cada módulo resuelve su ámbito con `userId` | Integración G2 |
+| D-003 | Ámbitos de rol y propiedad de los ámbitos | G2 posee equipos; G1 no debe duplicar reglas de G2 | Resuelta (2026-11-24, respuesta A): G1 emite roles y permisos; cada módulo resuelve su ámbito con `userId` y sus propios datos; catálogo versionado y ampliable | Fase C (verificación con G2) |
 | D-004 | Duración de tokens, refresco, rotación y ventana de revocación | Afecta a seguridad, UX y propagación de revocación | Valores de desarrollo/pruebas aprobados: código 5 min, access 5 min, id 5 min, refresh rotativo 8 h, inactividad 30 min, absoluta 12 h, skew 2 min; producción pendiente de ratificar | Fase B (valores de producción) |
 | D-005 | Revocación por JWT corto, introspección o denylist | Un JWT es válido hasta expirar aunque se revoque la sesión | Sin introspección en v1; JWT corto + revocación de sesión/refresh; la revocación inmediata de access tokens sigue abierta para producción | Producción |
 | D-006 | 2FA: métodos, obligatoriedad y step-up | Afecta a login, soporte y accesibilidad | TOTP + códigos de recuperación; obligatorio para administradores | Fase B |
@@ -601,17 +616,19 @@ Las decisiones se registran también en `docs/decisions/pending-decisions.md`. L
 | D-014 | Política de deprecación de versiones | Los módulos necesitan tiempo de migración | Ventana mínima de un semestre o la duración del curso | Fase B |
 | D-015 | Multi-club o multi-tenancy | Cambia el modelo de identidad y los ámbitos | Fuera de alcance inicial; no diseñar para múltiples clubes sin requisito | Futuro |
 | D-016 | Audiencias definitivas por API | Un token para `identity-api` no debe aceptarse por defecto en G2/G3/G4 | Decidir la matriz de audiencias antes de la integración; validar `aud` en cada API | Fase B e integración G2/G3/G4 |
+| D-017 | Fuente de los datos de contacto para comunicaciones de G4 | G4 necesita correo o teléfono, pero G1 no debe convertirse en directorio | Resuelta (2026-11-24): G1 solo expone el contacto propio vía `/me` y userinfo; G4 obtiene los contactos de G3 | Fase C (contrato G3-G4) |
 
-D-002, D-004 y D-005 quedan cerradas para la fase A en el alcance indicado. D-001, D-003 y D-016 siguen abiertas y no bloquean el plan de la fase A; D-004 y D-005 mantienen abiertos sus valores y mecanismos de producción.
+D-002, D-003, D-004, D-005 y D-017 quedan cerradas para la fase A en el alcance indicado. D-001 y D-016 siguen abiertas y no bloquean el plan de la fase A; D-004 y D-005 mantienen abiertos sus valores y mecanismos de producción, la verificación de D-003 con G2 corresponde a la fase C y D-017 depende del contrato de contacto de G3.
 
 ## 9. Dependencias y riesgos
 
 ### 9.1 Dependencias
 
 - Aprobación de esta especificación y de los ADR-0001 y ADR-0002.
-- Ratificación de D-001, D-003, D-004 (valores de producción), D-005 (revocación de access tokens) y D-016 (audiencias) antes de la fase B; D-002 queda aprobada provisionalmente para la fase A.
+- Ratificación de D-001, D-004 (valores de producción), D-005 (revocación de access tokens) y D-016 (audiencias) antes de la fase B; D-002 y D-003 quedan aprobadas para la fase A, con la verificación de ámbitos de D-003 en la fase C.
 - Disponibilidad de .NET SDK 10.0.404 y de los paquetes verificados.
 - Coordinación con G2, G3 y G4 para la validación del catálogo provisional y la matriz de audiencias.
+- Coordinación con G3 para el contrato de datos de contacto que consume G4 (D-017).
 - Definición de la matriz de permisos por parte de G1 con los propietarios de módulo.
 - Entorno de CI con Node.js LTS para Playwright.
 
@@ -655,9 +672,9 @@ D-002, D-004 y D-005 quedan cerradas para la fase A en el alcance indicado. D-00
 | FR-029 a FR-037 | US2, US5 | Pruebas del mock, PKCE, refresco y fixtures |
 | FR-038 a FR-045 | US3, US4 | Pruebas de errores, CORS, rate limit y auditoría |
 | FR-046 a FR-052 | US6 | CI, Playwright y revisión de documentación |
-| FR-053 a FR-056 | US2, US3, US5 | Pruebas de audiencia, ausencia de introspección, refresco y catálogo provisional |
+| FR-053 a FR-058 | US2, US3, US5 | Pruebas de audiencia, ausencia de introspección, refresco, catálogo provisional y ausencia de contacto de terceros |
 | NFR-001 a NFR-010 | Todos | Medición, revisión y CI |
-| SC-001 a SC-011 | Todos | Criterios de aceptación medibles |
+| SC-001 a SC-012 | Todos | Criterios de aceptación medibles |
 
 ## 12. Glosario
 
@@ -681,7 +698,7 @@ D-002, D-004 y D-005 quedan cerradas para la fase A en el alcance indicado. D-00
 - **Token de acceso**: credencial de corta duración para llamar a una API.
 - **Token de identidad**: JWT OIDC con claims de identidad para el cliente.
 
-## 13. Clarificaciones (2026-11-22)
+## 13. Clarificaciones (2026-11-22 y 2026-11-24)
 
 | # | Pregunta | Decisión ratificada |
 | --- | --- | --- |
@@ -689,3 +706,5 @@ D-002, D-004 y D-005 quedan cerradas para la fase A en el alcance indicado. D-00
 | 2 | Audiencia y scopes OAuth | Opción A de la clarificación, provisional. `aud=identity-api`; scopes `openid`, `profile`, `email`, `offline_access` e `identity.api`. Cada API consumidora valida la audiencia y aplica su propia política; un token de `identity-api` no es válido automáticamente para G2, G3 o G4. La decisión definitiva es D-016. |
 | 3 | Introspección (D-005) | Opción B de la clarificación (sin introspección). `/connect/introspect` no se incluye en el contrato v1 ni en el mock. Podrá añadirse en una versión posterior. La validación JWT con JWKS no garantiza revocación inmediata. |
 | 4 | Vigencias y revocación (D-004) | Opción A de la clarificación (valores configurables). Código 5 min, access token 5 min, ID token 5 min, refresh rotativo 8 h, inactividad 30 min, duración absoluta 12 h, tolerancia de reloj 2 min. La revocación de sesión/refresh se prueba por separado de la caducidad del access token; no se promete revocación de JWT en 30 segundos. |
+| 5 | Modelo de autorización y ámbitos (D-003) | Opción A de la clarificación (2026-11-24). `/me` devuelve `roles` y `permissions`; G1 publica códigos estables y cada módulo resuelve sus ámbitos (equipo, categoría, colectivo) con el `userId` y sus propios datos. G1 no interpreta ámbitos de negocio. El catálogo está versionado y se amplía sin romper a los consumidores. |
+| 6 | Contacto para G4 (D-017) | Opción C de la clarificación (2026-11-24). Solo autoservicio vía userinfo: G1 no expone datos de contacto de terceros y `/connect/userinfo` solo devuelve los datos del usuario autenticado. G4 obtiene los contactos de G3, que los gestiona en la ficha de socio. Cualquier ampliación futura exige permiso, auditoría y consentimiento de tutor para menores. |

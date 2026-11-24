@@ -2,7 +2,7 @@
 
 Este registro es la fuente única de las decisiones de identidad, tanto las pendientes como las cerradas para la fase A. Una decisión pendiente no se resuelve con un valor por defecto, una suposición o una implementación silenciosa. Mientras siga abierta, el código la trata como configurable o explícitamente no soportada, y las pruebas lo reflejan.
 
-- **Última actualización**: 2026-11-22
+- **Última actualización**: 2026-11-24
 - **Responsable del registro**: equipo G1
 - **Ámbito**: identidad, autenticación y autorización de G1, con impacto en G2, G3 y G4
 
@@ -12,7 +12,7 @@ Este registro es la fuente única de las decisiones de identidad, tanto las pend
 | --- | --- | --- | --- | --- |
 | D-001 | BFF con cookies o SPA pública con tokens | BFF con cookies `HttpOnly` | Fase B | Abierta |
 | D-002 | Catálogo de roles y matriz de permisos | Catálogo provisional v1 deny-by-default | Ratificación en fase B | Resuelta para fase A (provisional) |
-| D-003 | Ámbitos de rol y propiedad | G1 emite roles; cada módulo resuelve su ámbito | Integración G2 | Abierta |
+| D-003 | Ámbitos de rol y propiedad | G1 emite roles; cada módulo resuelve su ámbito | Fase C (verificación con G2) | Resuelta para fase A (2026-11-24) |
 | D-004 | Duración de tokens, refresco y sesión | Valores de desarrollo/pruebas aprobados; producción pendiente | Fase B (valores de producción) | Resuelta para fase A (mock) |
 | D-005 | Estrategia de revocación | Sin introspección en v1; JWT corto + revocación de sesión/refresh | Producción | Parcial para fase A |
 | D-006 | Segundo factor | TOTP + códigos de recuperación; obligatorio para administradores | Fase B | Abierta |
@@ -26,6 +26,7 @@ Este registro es la fuente única de las decisiones de identidad, tanto las pend
 | D-014 | Deprecación de versiones | Seis meses o duración del curso | Fase B | Abierta |
 | D-015 | Multi-club o multi-tenancy | Fuera de alcance inicial | Futuro | Abierta |
 | D-016 | Audiencias definitivas por API | Matriz de audiencias antes de integración; validar `aud` siempre | Fase B e integración G2/G3/G4 | Abierta |
+| D-017 | Fuente de datos de contacto para G4 | G1 solo expone el contacto propio; G4 lo obtiene de G3 | Fase C (contrato G3-G4) | Resuelta para fase A (2026-11-24) |
 
 ## D-001: BFF con cookies o SPA pública con tokens
 
@@ -63,9 +64,11 @@ Este registro es la fuente única de las decisiones de identidad, tanto las pend
   - G1 almacena ámbitos opacos proporcionados por el módulo propietario y los incluye en el token.
   - G1 consulta al módulo propietario en cada validación.
 - **Recomendación**: G1 emite roles y permisos; cada módulo resuelve su ámbito con `userId` y sus propios datos. Si un rol necesita ámbito, G1 transporta una referencia opaca sin interpretarla.
+- **Decisión adoptada (2026-11-24)**: opción A. `/me` devuelve `roles` y `permissions`; G1 publica códigos estables y cada módulo resuelve sus ámbitos (equipo, categoría, colectivo) con el `userId` y sus propios datos. G1 no interpreta ni valida reglas de ámbito de otro módulo. El catálogo de roles y permisos está versionado y se amplía de forma aditiva sin romper a los consumidores.
+- **Estado**: resuelta para la fase A (decisión de diseño del contrato y del mock). La verificación con un entrenador de un equipo y otro de varios equipos corresponde a la fase C.
 - **Impacto**: evita dependencias circulares y duplicación de reglas; condiciona el contrato de G2.
 - **Responsable**: G1 y G2.
-- **Bloquea**: integración de G2.
+- **Bloquea**: fase C (verificación de integración con G2); no bloquea el plan de la fase A.
 - **Criterio de cierre**: contrato de ámbito acordado y probado con un entrenador de un equipo y un entrenador de varios equipos.
 
 ## D-004: Duración de tokens, refresco y sesión
@@ -245,10 +248,27 @@ Este registro es la fuente única de las decisiones de identidad, tanto las pend
 - **Bloquea**: fase B e integración de G2, G3 y G4.
 - **Criterio de cierre**: matriz de audiencias aprobada, publicada en la guía de consumo y probada con un token válido y otro rechazado en cada API.
 
+## D-017: Fuente de datos de contacto para G4
+
+- **Contexto**: G4 (comunicaciones) necesita correo o teléfono de socios y familias para enviar avisos. El contrato de G1 solo expone el correo propio en `/me` y excluye todo dato de contacto del resumen de otros usuarios. Exponer un directorio de contacto en G1 ampliaría la superficie sensible y chocaría con la minimización.
+- **Opciones**:
+  - Endpoint dedicado de contacto por lote, protegido por un permiso nuevo y auditado.
+  - Ampliar `/users/{userId}/summary` y `/users/lookup` con `include=contact`.
+  - Solo autoservicio vía userinfo; G4 obtiene los contactos de G3.
+- **Recomendación**: endpoint dedicado, minimizado y auditado, si G1 debe ser la fuente; en su defecto, autoservicio y coordinación con G3.
+- **Decisión adoptada (2026-11-24)**: opción C. G1 no expone datos de contacto de terceros ni actúa como directorio. `/connect/userinfo` devuelve únicamente los datos del usuario autenticado (`sub`, `name`, `email`, `email_verified` con scope `email`; el teléfono no se publica en v1 porque no hay scope `phone`). G4 obtiene los contactos de G3, que los gestiona en la ficha de socio.
+- **Estado**: resuelta para la fase A (contrato y mock). La integración depende del contrato de contacto que publique G3.
+- **Impacto**: evita un directorio sensible en G1 y duplica la coordinación con G3; cualquier ampliación futura exige permiso explícito, auditoría y consentimiento de tutor para menores.
+- **Responsable**: G1 con G3 y G4.
+- **Bloquea**: fase C (contrato G3-G4).
+- **Criterio de cierre**: contrato de contacto de G3 publicado y probado con G4; prueba de que G1 no expone contacto ajeno.
+
 ## Decisiones ya cerradas
 
 - **D-002 — cerrada para la fase A (2026-11-22)**: catálogo provisional v1 de roles y matriz deny-by-default, pendiente de validación del equipo y de ratificación formal en fase B.
+- **D-003 — cerrada para la fase A (2026-11-24)**: G1 emite roles y permisos; cada módulo resuelve su ámbito con `userId` y sus propios datos. La verificación de integración con G2 queda para la fase C.
 - **D-004 — cerrada para la fase A (2026-11-22)**: valores de desarrollo y pruebas aprobados y configurables; los valores de producción siguen pendientes.
 - **D-005 — cerrada para la fase A (2026-11-22)**: sin introspección en v1; la revocación de access tokens JWT en producción sigue abierta.
+- **D-017 — cerrada para la fase A (2026-11-24)**: G1 solo expone el contacto del usuario autenticado; G4 obtiene los contactos de G3. La integración depende del contrato de contacto de G3.
 
 Estas decisiones se reflejan en la especificación y en el ADR-0001. No implican la ratificación formal de la fase B.
