@@ -75,8 +75,10 @@ jobs:
         run: |
           git fetch origin 001-g1-identidad-contrato-mock || true
           rama="origin/001-g1-identidad-contrato-mock"
+          # La acción de oasdiff corre en un contenedor que solo monta GITHUB_WORKSPACE.
+          base="$GITHUB_WORKSPACE/.oasdiff-openapi-base.yaml"
           if git cat-file -e "$rama:$CONTRACT" 2>/dev/null; then
-            git show "$rama:$CONTRACT" > /tmp/openapi-base.yaml
+            git show "$rama:$CONTRACT" > "$base"
             echo "existe=true" >> "$GITHUB_OUTPUT"
           else
             echo "existe=false" >> "$GITHUB_OUTPUT"
@@ -86,5 +88,5 @@ jobs:
         if: steps.base.outputs.existe == 'true'
         uses: oasdiff/oasdiff-action/breaking@v0
         with:
-          base: /tmp/openapi-base.yaml
+          base: .oasdiff-openapi-base.yaml
           revision: ${{ env.CONTRACT }}
