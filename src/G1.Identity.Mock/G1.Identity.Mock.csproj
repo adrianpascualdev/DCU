@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="OpenApi/ContractDocument.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="Resources/IdentityMessages.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>

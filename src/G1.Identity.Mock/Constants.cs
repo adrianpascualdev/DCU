@@ -56,6 +56,9 @@ namespace G1.Identity.Mock
             internal const string ReferrerPolicy = @"Referrer-Policy";
             internal const string RetryAfter = @"Retry-After";
             internal const string AntiforgeryToken = @"X-XSRF-TOKEN";
+            internal const string CacheControl = @"Cache-Control";
+            internal const string ETag = @"ETag";
+            internal const string IfNoneMatch = @"If-None-Match";
             internal const string NoSniff = @"nosniff";
             internal const string Deny = @"DENY";
             internal const string NoReferrer = @"no-referrer";
@@ -101,7 +104,7 @@ namespace G1.Identity.Mock
         internal static class SecurityHeaders
         {
             internal const string SwaggerContentSecurityPolicy =
-                @"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+                @"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
         }
 
         /// <summary>
@@ -110,6 +113,29 @@ namespace G1.Identity.Mock
         internal static class ContentTypes
         {
             internal const string ProblemJson = @"application/problem+json";
+            internal const string Json = @"application/json";
+        }
+
+        /// <summary>
+        /// Valores que identifican el documento OpenAPI publicado.
+        /// </summary>
+        internal static class OpenApi
+        {
+            internal const string DocumentName = @"v1";
+            internal const string SpecificationField = @"openapi";
+            internal const string SpecificationVersion = @"3.1.0";
+            internal const string ApiVersion = @"1.0.0";
+            internal const string CacheControl = @"no-cache";
+            internal const string SwaggerRoutePrefix = @"swagger";
+            internal const string SwaggerTitle = @"G1 Identity API 1.0.0";
+        }
+
+        /// <summary>
+        /// Entornos donde se publica la documentación interactiva.
+        /// </summary>
+        internal static class Environments
+        {
+            internal const string Testing = @"Testing";
         }
 
         /// <summary>
@@ -118,6 +144,7 @@ namespace G1.Identity.Mock
         internal static class Paths
         {
             internal const string SwaggerPrefix = @"/swagger";
+            internal const string OpenApiDocument = @"/openapi/v1.json";
         }
 
         /// <summary>

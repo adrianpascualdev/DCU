@@ -1,9 +1,11 @@
 using System.Threading.RateLimiting;
 using G1.Identity.Mock;
 using G1.Identity.Mock.Exceptions;
+using G1.Identity.Mock.OpenApi;
 using G1.Identity.Mock.Resources;
 using G1.Identity.Mock.Settings;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.OpenApi;
 using SessionSettings = G1.Identity.Mock.Settings.SessionOptions;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -37,7 +39,13 @@ namespace Microsoft.Extensions.DependencyInjection
 
             /* Servicios de infraestructura */
             builder.Services
-                .AddOpenApi()
+                .AddSingleton<ContractDocumentProvider>()
+                .AddSingleton<ContractDocumentTransformer>()
+                .AddOpenApi(options =>
+                {
+                    options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1;
+                    options.AddDocumentTransformer<ContractDocumentTransformer>();
+                })
                 .AddProblemDetails()
                 .AddExceptionHandler<GlobalExceptionHandler>()
                 .ConfigureCors(builder.Configuration)

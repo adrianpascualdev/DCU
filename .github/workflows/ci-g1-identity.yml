@@ -68,6 +68,9 @@ jobs:
       - name: Validar el contrato con Redocly
         run: npx --yes @redocly/cli@2.83.0 lint "$CONTRACT"
 
+      - name: Comprobar la copia runtime del contrato
+        run: bash scripts/export-openapi.sh check
+
       - name: Preparar contrato base para oasdiff
         id: base
         shell: bash
