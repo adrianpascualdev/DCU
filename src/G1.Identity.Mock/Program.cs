@@ -1,3 +1,4 @@
+using G1.Identity.Mock.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace G1.Identity.Mock
@@ -15,6 +16,7 @@ namespace G1.Identity.Mock
         {
             var builder = WebApplication.CreateBuilder(args);
             var app = builder.Configure().Build();
+            app.UseMiddlewares().UseRegisterEndpointDefinitions();
 
             try
             {

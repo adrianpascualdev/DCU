@@ -17,4 +17,15 @@
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../src/G1.Identity.Mock/G1.Identity.Mock.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../src/G1.Identity.Mock/appsettings.json"
+          Link="appsettings.mock.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

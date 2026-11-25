@@ -59,8 +59,7 @@ jobs:
         run: dotnet build G1.Identity.slnx --configuration Release --no-restore
 
       - name: Ejecutar pruebas
-        # En Setup aún no hay pruebas de historia: MTP devuelve 8 cuando no se ejecuta ninguna.
-        run: dotnet test --solution G1.Identity.slnx --configuration Release --no-build -- --ignore-exit-code 8
+        run: dotnet test --solution G1.Identity.slnx --configuration Release --no-build
 
       - name: Instalar navegadores de Playwright
         shell: bash
