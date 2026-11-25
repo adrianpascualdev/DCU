@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/G1.Identity.Mock/G1.Identity.Mock.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/G1.Identity.CompatibilityTests/G1.Identity.CompatibilityTests.csproj" />
+    <Project Path="tests/G1.Identity.ContractTests/G1.Identity.ContractTests.csproj" />
+    <Project Path="tests/G1.Identity.E2E/G1.Identity.E2E.csproj" />
+  </Folder>
+</Solution>
