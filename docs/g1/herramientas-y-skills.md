@@ -1,9 +1,9 @@
 # Herramientas y skills de G1
 
-- **Fecha**: 2026-11-24
+- **Fecha**: 2026-11-24 (verificación inicial); 2026-11-25 (cierre de T059)
 - **Responsable**: DEV1
 - **Rama**: `dev1/infra-contract`
-- **Tareas**: T008 (verificación inicial); T059 completará el registro de excepciones al cierre de la fase A
+- **Tareas**: T008 (verificación inicial y repetición); T059 (registro formal de excepciones)
 
 Este documento deja evidencia de cómo se descubren y cargan las skills del equipo, y describe el procedimiento para repetir la comprobación. No modifica las skills ni las instrucciones de GitHub Copilot.
 
@@ -57,10 +57,14 @@ El resultado esperado del paso 2 es una salida vacía en `git status`: cualquier
 
 Las instrucciones `coding-style-css-theming.instructions.md` y `coding-style-frontend-design-system.instructions.md` citan `myadmon-theme`, que no existe en `.github/skills/`. La comprobación confirma su ausencia. Mientras no se aporte la skill, la T029 define tokens locales concretos y accesibles; no se inventa una skill equivalente ni se modifica la instrucción.
 
-## Excepciones pendientes de registro formal
+## Excepciones registradas (T059)
 
-- La guía `dotnet-api-architecture` prefiere Scalar, pero la constitución y el mandato del usuario exigen Swagger UI con `Swashbuckle.AspNetCore.SwaggerUI`. Se aplica Swagger UI y la excepción se registrará formalmente en T059.
-- EF Core InMemory incumple la restricción técnica 4 de la constitución. ADR-0002 fue ratificada por equipo G1 el 2026-11-25 como excepción académica y ya no bloquea Phase 2 dentro de ese alcance. La persistencia relacional y el plan de migración siguen pendientes antes de datos reales o producción.
+- **Swagger UI frente a Scalar**: `.github/instructions/coding-style-csharp-project-structure.instructions.md` (líneas 22, 57 y 78) prefiere `Scalar.AspNetCore` para proyectos nuevos. La restricción técnica 3 de `.specify/memory/constitution.md` exige `OpenAPI + Swagger UI` y el mandato de la fase A exige publicar el contrato en `/swagger`. Se aplica `Swashbuckle.AspNetCore.SwaggerUI` 10.3.1 desde `src/G1.Identity.Mock/Endpoints/DocsEndpoints.cs`. La instrucción no se modifica: la preferencia por Scalar queda registrada como no aplicable a este host.
+- **EF Core InMemory**: la restricción técnica 4 de `.specify/memory/constitution.md` exige persistencia EF Core con migraciones versionadas y revisables. La ADR-0002, ratificada por el equipo G1 el 2026-11-25, limita InMemory a desarrollo, demostración y pruebas académicas; exige `DisableBulkOperations()` y prohíbe datos reales o producción. La persistencia relacional, las migraciones y el plan de sustitución siguen pendientes en D-009 y T055. La constitución no se modifica.
+
+## Repetición de la comprobación de skills (T008)
+
+En la sesión de cierre de T059 se repitió la comprobación inicial: `opencode.jsonc` mantiene `"skills": ["./.github/skills"]`; se cargaron `dotnet-api-architecture`, `nuget-package-manager` y `code-review`, y las tres devolvieron su `SKILL.md` con su base directory. `git status --porcelain -- .github/skills .github/instructions .github/copilot-instructions.md` permaneció vacío. La skill `myadmon-theme` sigue ausente, tal como se documenta más arriba.
 
 ## Resultado
 
@@ -69,5 +73,9 @@ Las instrucciones `coding-style-css-theming.instructions.md` y `coding-style-fro
 | `opencode.jsonc` registra `.github/skills/` | Correcto |
 | `dotnet-api-architecture` cargada en OpenCode v2.1.4 | Correcto |
 | `nuget-package-manager` cargada en OpenCode v2.1.4 | Correcto |
+| `code-review` cargada en la sesión de cierre | Correcto |
 | `.github/skills/` y `.github/instructions/` sin cambios | Correcto |
 | `myadmon-theme` ausente y documentado | Correcto |
+| Repetición de la comprobación de skills de T008 | Correcta |
+| Excepción Swagger UI registrada sin modificar la instrucción | Correcta |
+| Excepción InMemory registrada sin modificar la constitución | Correcta |

@@ -198,6 +198,13 @@ paths:
               schema:
                 type: string
                 const: no-store
+          x-success-example:
+            httpStatus: 302
+            headers:
+              Location: 'https://localhost:3000/callback?code=codigo_ficticio&state=estado_opaco'
+              Cache-Control: no-store
+            body: null
+            note: "Código de autorización ficticio; el valor real se genera por operación."
         '400':
           $ref: '#/components/responses/OAuthBadRequest'
         '401':

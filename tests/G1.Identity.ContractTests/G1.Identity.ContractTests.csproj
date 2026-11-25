@@ -15,6 +15,7 @@
   <ItemGroup>
     <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="xunit.v3" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,9 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../src/G1.Identity.Mock/appsettings.json"
-          Link="appsettings.mock.json"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../src/G1.Identity.Mock/appsettings.json" Link="appsettings.mock.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../specs/001-g1-identidad-contrato-mock/contracts/openapi.v1.yaml" Link="openapi.v1.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
