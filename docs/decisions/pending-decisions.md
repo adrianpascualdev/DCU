@@ -2,7 +2,7 @@
 
 Este registro es la fuente única de las decisiones de identidad, tanto las pendientes como las cerradas para la fase A. Una decisión pendiente no se resuelve con un valor por defecto, una suposición o una implementación silenciosa. Mientras siga abierta, el código la trata como configurable o explícitamente no soportada, y las pruebas lo reflejan.
 
-- **Última actualización**: 2026-11-24
+- **Última actualización**: 2026-11-25
 - **Responsable del registro**: equipo G1
 - **Ámbito**: identidad, autenticación y autorización de G1, con impacto en G2, G3 y G4
 
@@ -18,7 +18,7 @@ Este registro es la fuente única de las decisiones de identidad, tanto las pend
 | D-006 | Segundo factor | TOTP + códigos de recuperación; obligatorio para administradores | Fase B | Abierta |
 | D-007 | Registro, contraseñas, verificación y menores | Correo y teléfono obligatorios; verificación; consentimiento de tutor | Fase B | Abierta |
 | D-008 | Retención y acceso a auditoría | Un año para eventos de seguridad; minimización | Fase B | Abierta |
-| D-009 | Persistencia definitiva | InMemory académico; SQLite o SQL Server antes de datos reales | Producción | Abierta |
+| D-009 | Persistencia definitiva | InMemory académico; SQLite o SQL Server antes de datos reales | Producción | Excepción académica ratificada (2026-11-25); persistencia definitiva abierta |
 | D-010 | Proveedores de correo y SMS | Abstracción + sumidero local; proveedor antes de fase B | Fase B | Abierta |
 | D-011 | Alojamiento, TLS y claves | Contenedor Linux; claves en almacén de secretos; key ring persistente | Producción | Abierta |
 | D-012 | Consentimiento de primera parte | Implícito y documentado; explícito para terceros | Fase B | Abierta |
@@ -151,10 +151,12 @@ Este registro es la fuente única de las decisiones de identidad, tanto las pend
   - SQL Server LocalDB o contenedor.
   - PostgreSQL en contenedor.
 - **Recomendación**: InMemory para el alcance académico con excepción ratificada; SQLite o SQL Server/PostgreSQL antes de datos reales.
-- **Impacto**: cumple o no la restricción técnica 4; afecta a pruebas y despliegue.
+- **Decisión ratificada (2026-11-25)**: el equipo G1 aprobó ADR-0002 como excepción académica para desarrollo, demostración y pruebas de las fases A/B, sin datos reales ni producción. No se han inventado aprobaciones adicionales.
+- **Impacto**: cumple o no la restricción técnica 4; afecta a pruebas y despliegue. La excepción no declara cumplidas las migraciones versionadas.
 - **Responsable**: responsable del proyecto.
-- **Bloquea**: producción.
-- **Criterio de cierre**: ADR-0002 ratificado o reemplazado por un ADR de persistencia relacional.
+- **Bloquea**: producción (persistencia definitiva, proveedor relacional y plan de migración).
+- **Estado**: excepción académica ratificada; la persistencia definitiva sigue abierta.
+- **Criterio de cierre restante**: elegir el proveedor relacional, generar migraciones versionadas y registrar un ADR de persistencia relacional antes de datos reales; la prueba de CI con proveedor relacional (T055) sigue pendiente.
 
 ## D-010: Proveedores de correo y SMS
 
@@ -268,6 +270,7 @@ Este registro es la fuente única de las decisiones de identidad, tanto las pend
 - **D-002 — cerrada para la fase A (2026-11-22)**: catálogo provisional v1 de roles y matriz deny-by-default, pendiente de validación del equipo y de ratificación formal en fase B.
 - **D-003 — cerrada para la fase A (2026-11-24)**: G1 emite roles y permisos; cada módulo resuelve su ámbito con `userId` y sus propios datos. La verificación de integración con G2 queda para la fase C.
 - **D-004 — cerrada para la fase A (2026-11-22)**: valores de desarrollo y pruebas aprobados y configurables; los valores de producción siguen pendientes.
+- **D-009 — excepción académica ratificada (2026-11-25)**: ADR-0002 aprobado por equipo G1 para desarrollo, demostración y pruebas; la persistencia definitiva y la migración relacional siguen abiertas.
 - **D-005 — cerrada para la fase A (2026-11-22)**: sin introspección en v1; la revocación de access tokens JWT en producción sigue abierta.
 - **D-017 — cerrada para la fase A (2026-11-24)**: G1 solo expone el contacto del usuario autenticado; G4 obtiene los contactos de G3. La integración depende del contrato de contacto de G3.
 

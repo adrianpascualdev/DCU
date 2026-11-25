@@ -60,7 +60,7 @@ Las instrucciones `coding-style-css-theming.instructions.md` y `coding-style-fro
 ## Excepciones pendientes de registro formal
 
 - La guía `dotnet-api-architecture` prefiere Scalar, pero la constitución y el mandato del usuario exigen Swagger UI con `Swashbuckle.AspNetCore.SwaggerUI`. Se aplica Swagger UI y la excepción se registrará formalmente en T059.
-- EF Core InMemory incumple la restricción técnica 4 de la constitución hasta que se ratifique ADR-0002. Esta ratificación no se ha simulado y bloquea Phase 2 y todas las historias.
+- EF Core InMemory incumple la restricción técnica 4 de la constitución. ADR-0002 fue ratificada por equipo G1 el 2026-11-25 como excepción académica y ya no bloquea Phase 2 dentro de ese alcance. La persistencia relacional y el plan de migración siguen pendientes antes de datos reales o producción.
 
 ## Resultado
 

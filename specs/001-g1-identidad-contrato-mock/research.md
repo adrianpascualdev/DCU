@@ -46,7 +46,7 @@ Este documento consolida las decisiones técnicas de la fase A. No repite las in
 - **Decisión**: EF Core InMemory 10.0.15 con `EnsureCreated()`, `DisableBulkOperations()` y seeding idempotente. Sin migraciones. Los stores de OpenIddict para aplicaciones, autorizaciones y tokens usan el mismo `DbContext` que el estado del mock.
 - **Rationale**: es la persistencia académica solicitada y la combinación verificada en el spike. `DisableBulkOperations()` es obligatoria porque InMemory no soporta `ExecuteUpdate`/`ExecuteUpdateAsync`; sin ella la revocación falla.
 - **Alternativas consideradas**:
-  - SQLite: cumple migraciones, pero no es la persistencia solicitada; queda como alternativa si no se ratifica ADR-0002.
+  - SQLite: cumple migraciones, pero no es la persistencia solicitada; queda como alternativa obligatoria antes de datos reales (D-009), aunque ADR-0002 ya esté ratificado para el alcance académico.
   - SQL Server/PostgreSQL: añade infraestructura y no aporta valor a la fase A.
   - Stores en memoria propios de OpenIddict sin EF: menos fiel a la fase B y no ejercita el `DbContext` previsto.
 
@@ -149,4 +149,4 @@ Este documento consolida las decisiones técnicas de la fase A. No repite las in
 
 ## Conclusión
 
-No quedan incógnitas técnicas que impidan el diseño de la fase A. Las únicas condiciones abiertas son de gobernanza, no de viabilidad: ratificación de ADR-0002 (InMemory) y de ADR-0001 (arquitectura de fase B), y cierre de D-001 y D-016 antes de la integración. Ninguna se resuelve implícitamente en este plan.
+No quedan incógnitas técnicas que impidan el diseño de la fase A. ADR-0002 (InMemory) quedó ratificado por equipo G1 el 2026-11-25 para el alcance académico. Siguen abiertas, sin resolverse implícitamente, la ratificación de ADR-0001 (arquitectura de fase B), la persistencia relacional de D-009 antes de datos reales y el cierre de D-001 y D-016 antes de la integración.

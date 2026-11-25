@@ -13,7 +13,7 @@ Guía ejecutable para comprobar que el contrato y el mock cumplen los escenarios
 - Certificado de desarrollo confiable: `dotnet dev-certs https --trust`.
 - Navegador Chromium instalado por Playwright para las pruebas E2E.
 
-> **Aviso**: el mock usa EF Core InMemory. Todos los datos, sesiones y tokens se pierden al reiniciar. No usar datos reales. ADR-0002 sigue pendiente de ratificación formal: esta guía describe la validación prevista, pero las tareas de implementación no deben ejecutarse hasta que se ratifique.
+> **Aviso**: el mock usa EF Core InMemory. Todos los datos, sesiones y tokens se pierden al reiniciar. No usar datos reales. ADR-0002 fue ratificado por equipo G1 el 2026-11-25 como excepción académica para desarrollo, demostración y pruebas; la persistencia relacional sigue pendiente antes de datos reales o producción.
 
 ## 2. Arranque
 

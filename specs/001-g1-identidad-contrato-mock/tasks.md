@@ -22,7 +22,7 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 - **Estilo**: `.editorconfig` manda (CRLF, 4 espacios; 2 espacios en JSON/csproj/props).
 - **Excepción documentada**: `.github/instructions/coding-style-csharp-project-structure.instructions.md` prefiere Scalar para proyectos nuevos, pero la constitución y el mandato del usuario exigen Swagger UI. Se aplica Swagger UI y se registra la excepción en T059; no se modifica la instrucción.
 - **Skill referenciada ausente**: `coding-style-css-theming.instructions.md` y `coding-style-frontend-design-system.instructions.md` citan `myadmon-theme`, que no existe en `.github/skills/`. La T029 define tokens locales concretos y accesibles hasta que se aporte la skill.
-- **Excepción pendiente**: EF Core InMemory incumple la restricción técnica 4 de la constitución (migraciones versionadas) hasta que se ratifique ADR-0002. **Ninguna tarea de implementación puede ejecutarse antes de esa ratificación.** Las tareas documentales y de validación del contrato pueden prepararse, pero no marcarse como completadas si dependen de código no implementado.
+- **Excepción ratificada**: ADR-0002 fue aprobado por equipo G1 el 2026-11-25 para desarrollo, demostración y pruebas. La excepción no cubre datos reales ni producción: la persistencia definitiva, el proveedor relacional y la prueba de CI con proveedor relacional (T055) siguen pendientes. Las tareas solo se marcan como completadas cuando están implementadas y verificadas.
 
 ## Formato: `[ID] [P?] [Prioridad] [DEVn] [Story?] Descripción`
 
@@ -73,7 +73,7 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 - [ ] T017 [P0] [DEV3] Crear `src/G1.Identity.Mock/Fixtures/SeedData.cs` con **15 personas ficticias**, 10 roles, 3 permisos de G1, la matriz deny-by-default exacta de `data-model.md` y los 4 escenarios `token.*` como casos de token, no como personas; seeding idempotente. **Rama**: `dev3/users-persistence`. **Entregable**: `fixtureVersion` estable y reset reproducible.
 - [ ] T018 [P] [P0] [DEV4] Crear `src/G1.Identity.Mock/Endpoints/ErrorMapping.cs` para `application/problem+json` (RFC 9457) con `code` y `traceId`, separado de los errores OAuth estándar. **Rama**: `dev4/authz-audit`. **Entregable**: todos los errores de API con esquema documentado; SC-004.
 
-**Checkpoint**: base lista; las seis historias pueden comenzar. **ADR-0002 debe estar ratificado antes de ejecutar estas tareas.**
+**Checkpoint**: base lista; las seis historias pueden comenzar cuando sus propias dependencias estén listas. **ADR-0002 quedó ratificado por equipo G1 el 2026-11-25; la excepción se limita al alcance académico.**
 
 ---
 
@@ -239,7 +239,7 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: sin dependencias; T002 bloquea T003-T005; T008 es documental y paralela.
-- **Foundational (Phase 2)**: depende de Setup; T010 bloquea T011/T012/T017; T014 bloquea todos los endpoints; T015 bloquea US2; T016 bloquea US5 y el selector; T009 bloquea la configuración de TTL. **Puerta**: ratificación de ADR-0002 antes de ejecutar.
+- **Foundational (Phase 2)**: depende de Setup; T010 bloquea T011/T012/T017; T014 bloquea todos los endpoints; T015 bloquea US2; T016 bloquea US5 y el selector; T009 bloquea la configuración de TTL. **Puerta**: ADR-0002 ratificada por equipo G1 el 2026-11-25 para el alcance académico; la persistencia relacional sigue pendiente para datos reales.
 - **User Stories (Phase 3-8)**: dependen de Foundational. US1 y US2 son P1 y pueden avanzar en paralelo; US3 depende de T031 para `/me` con Bearer y de T035 para permisos; US4 depende de la sesión creada en US2; US5 depende de T016/T017 y T028; US6 depende de que las historias anteriores existan para cubrir las 19 operaciones.
 - **Polish (Phase 9)**: depende de US1-US6; T064 y T065 son las últimas.
 
@@ -297,7 +297,7 @@ Task: "Servir el build desde AppExtensions.cs y wwwroot/"
 
 ### MVP First (US1 + US2)
 
-1. Completar Phase 1 y Phase 2. **Parada obligatoria**: ratificar ADR-0002.
+1. Completar Phase 1 y Phase 2. **Puerta cumplida**: ADR-0002 ratificado por equipo G1 el 2026-11-25 dentro del alcance académico.
 2. Completar Phase 3 (US1): contrato navegable y CI de rupturas. Validar de forma aislada.
 3. Completar Phase 4 (US2): flujo PKCE y `/me`. Validar de forma aislada.
 4. **STOP and VALIDATE**: ejecutar `quickstart.md` secciones 2 a 6. Este es el primer entregable útil para G2, G3 y G4.
@@ -360,14 +360,14 @@ Task: "Servir el build desde AppExtensions.cs y wwwroot/"
 - `[Story]` = trazabilidad con `spec.md`; no se añade en Setup, Foundational ni Polish.
 - Cada historia tiene prueba independiente y checkpoint; no se omiten.
 - No se genera código de aplicación en este comando: solo este `tasks.md`, `spec.md`, `plan.md`, contratos y documentación de equipo.
-- No se ejecuta implementación sin ratificación de ADR-0002 y aprobación explícita del listado.
+- ADR-0002 está ratificado para el alcance académico; no se ejecuta ninguna tarea fuera del listado aprobado ni se usa InMemory con datos reales.
 - La responsabilidad de pruebas y documentación es de quien ejecuta cada tarea; el PR se rechaza si falta alguna.
 
 ## Bloqueos pendientes (no resueltos por estas tareas)
 
 | Bloqueo | Estado | Impacto |
 | --- | --- | --- |
-| ADR-0002 (InMemory frente a migraciones de la constitución) | Pendiente de ratificación | Bloquea Phase 2 y, por tanto, todas las historias; no se simula su aprobación |
+| Persistencia relacional y migraciones (D-009) | ADR-0002 ratificado solo para el alcance académico (equipo G1, 2026-11-25) | Bloquea datos reales y producción; T055 y el plan de migración siguen pendientes |
 | ADR-0001 (servidor OAuth real con Identity + OpenIddict) | Propuesto | Bloquea la fase B; no bloquea el mock de fase A |
 | D-001 (BFF/SPA), D-012 (consentimiento), D-016 (audiencias) | Abiertas | No se resuelven en código; el contrato y el mock las declaran provisionales o configurables |
 | D-004 (valores de producción) y D-005 (revocación de JWT en producción) | Parciales | Solo se aplican los valores de desarrollo aprobados |
@@ -387,7 +387,7 @@ El reparto siguiente orienta la planificación de nuevas especificaciones. **No 
 | --- | --- | --- |
 | DEV1 | Arquitectura del servidor real, despliegue, CI/CD, contrato v2 si aplica | Contrato v1 estable y ADR-0001 ratificada |
 | DEV2 | Identity + OpenIddict, login, emisión, refresco, logout y claves | D-001, D-004 (producción), D-005 y D-016 decididas |
-| DEV3 | Registro, verificación, recuperación, 2FA y persistencia real | D-007, D-010, D-011 y ADR-0002 ratificada o sustituida |
+| DEV3 | Registro, verificación, recuperación, 2FA y persistencia real | D-007, D-010, D-011 y persistencia relacional pendiente (ADR-0002 solo cubre el alcance académico) |
 | DEV4 | Catálogo definitivo, asignación auditada, políticas y retención | D-002, D-006, D-008 y D-013 decididas |
 | DEV5 | Cliente web definitivo, BFF o SPA según D-001, E2E de producción | D-001 y D-016 decididas |
 

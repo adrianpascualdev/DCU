@@ -7,7 +7,7 @@ Este directorio contiene las decisiones de arquitectura (ADR) y el registro úni
 | ADR | Título | Estado | Fecha |
 | --- | --- | --- | --- |
 | [ADR-0001](ADR-0001-servidor-oauth-propio-identity-openiddict.md) | Servidor OAuth 2.0/OIDC propio con ASP.NET Core Identity y OpenIddict | Propuesto | 2026-11-11 |
-| [ADR-0002](ADR-0002-inmemory-persistencia-academica.md) | EF Core InMemory como persistencia académica | Propuesto, requiere excepción | 2026-11-11 |
+| [ADR-0002](ADR-0002-inmemory-persistencia-academica.md) | EF Core InMemory como persistencia académica | Aceptado (excepción académica, ratificada por equipo G1 el 2026-11-25) | 2026-11-11 |
 
 ## Registro de decisiones pendientes
 
