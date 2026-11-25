@@ -85,15 +85,15 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 
 ### Tests for User Story 1
 
-- [ ] T019 [P] [P1] [DEV1] [US1] Crear `tests/G1.Identity.ContractTests/OpenApiDocumentTests.cs`: validar `contracts/openapi.v1.yaml` como OpenAPI 3.1, comprobar `info.version`, seguridad, esquemas, `x-reviewed-at`, `x-persistence-exception` y que las 19 operaciones tienen ejemplo de éxito (`examples` o `x-success-example`) y error. **Rama**: `dev1/infra-contract`. **Entregable**: FR-001 a FR-006 y FR-005 con respuestas vacías documentadas.
-- [ ] T020 [P] [P1] [DEV1] [US1] Crear `tests/G1.Identity.ContractTests/SwaggerAvailabilityTests.cs`: `/swagger` responde en Development/Testing y `404` en otros entornos; añadir `scripts/check-openapi-breaking.sh` con `oasdiff` y `@redocly/cli`. **Rama**: `dev1/infra-contract`. **Entregable**: SC-006 verificado en local y CI.
+- [x] T019 [P] [P1] [DEV1] [US1] Crear `tests/G1.Identity.ContractTests/OpenApiDocumentTests.cs`: validar `contracts/openapi.v1.yaml` como OpenAPI 3.1, comprobar `info.version`, seguridad, esquemas, `x-reviewed-at`, `x-persistence-exception` y que las 19 operaciones tienen ejemplo de éxito (`examples` o `x-success-example`) y error. **Rama**: `dev1/infra-contract`. **Entregable**: FR-001 a FR-006 y FR-005 con respuestas vacías documentadas.
+- [x] T020 [P] [P1] [DEV1] [US1] Crear `tests/G1.Identity.ContractTests/SwaggerAvailabilityTests.cs`: `/swagger` responde en Development/Testing y `404` en otros entornos; añadir `scripts/check-openapi-breaking.sh` con `oasdiff` y `@redocly/cli`. **Rama**: `dev1/infra-contract`. **Entregable**: SC-006 verificado en local y CI.
 
 ### Implementation for User Story 1
 
-- [ ] T021 [P] [P1] [DEV1] [US1] Crear los transformadores en `src/G1.Identity.Mock/OpenApi/` para security schemes `cookieAuth`/`bearerAuth`, etiquetas, ejemplos, `Cache-Control`, `ETag` y versión 3.1 (Skill: `dotnet-api-architecture`). **Rama**: `dev1/infra-contract`. **Entregable**: documento runtime equivalente al normativo.
-- [ ] T022 [P1] [DEV1] [US1] Implementar `src/G1.Identity.Mock/Endpoints/DocsEndpoints.cs` con `/swagger` y `/openapi/v1.json` restringidos por entorno (Skill: `dotnet-api-architecture`). **Rama**: `dev1/infra-contract`. **Entregable**: UI navegable solo en desarrollo/pruebas.
-- [ ] T023 [P1] [DEV1] [US1] Sincronizar `contracts/openapi.v1.yaml` con el documento runtime y crear `scripts/export-openapi.sh` para regenerarlo, conservando `x-reviewed-at`, `x-persistence-exception` y los `x-success-example`. **Rama**: `dev1/infra-contract`. **Entregable**: diff vacío entre contrato y runtime.
-- [ ] T024 [P1] [DEV1] [US1] Ejecutar la validación de US1 con `quickstart.md` secciones 2 y 3 y registrar el resultado en `docs/g1/validacion-fase-a.md`. **Rama**: `dev1/infra-contract`. **Entregable**: SC-001 y SC-006 comprobados.
+- [x] T021 [P] [P1] [DEV1] [US1] Crear los transformadores en `src/G1.Identity.Mock/OpenApi/` para security schemes `cookieAuth`/`bearerAuth`, etiquetas, ejemplos, `Cache-Control`, `ETag` y versión 3.1 (Skill: `dotnet-api-architecture`). **Rama**: `dev1/infra-contract`. **Entregable**: documento runtime equivalente al normativo.
+- [x] T022 [P1] [DEV1] [US1] Implementar `src/G1.Identity.Mock/Endpoints/DocsEndpoints.cs` con `/swagger` y `/openapi/v1.json` restringidos por entorno (Skill: `dotnet-api-architecture`). **Rama**: `dev1/infra-contract`. **Entregable**: UI navegable solo en desarrollo/pruebas.
+- [x] T023 [P1] [DEV1] [US1] Sincronizar `contracts/openapi.v1.yaml` con el documento runtime y crear `scripts/export-openapi.sh` para regenerarlo, conservando `x-reviewed-at`, `x-persistence-exception` y los `x-success-example`. **Rama**: `dev1/infra-contract`. **Entregable**: diff vacío entre contrato y runtime.
+- [x] T024 [P1] [DEV1] [US1] Ejecutar la validación de US1 con `quickstart.md` secciones 2 y 3 y registrar el resultado en `docs/g1/validacion-fase-a.md`. **Rama**: `dev1/infra-contract`. **Entregable**: SC-001 y SC-006 comprobados.
 
 **Checkpoint**: US1 funciona de forma aislada; contrato navegable y verificable en CI.
 
