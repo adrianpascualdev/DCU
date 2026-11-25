@@ -311,7 +311,7 @@ Estas restricciones provienen de la constitución y del mandato del usuario; no 
 - .NET 10.0 y C# 14 con ASP.NET Core Minimal APIs.
 - React + TypeScript para la interfaz web, con build y despliegue independientes.
 - OpenAPI + Swagger UI.
-- Entity Framework Core InMemory para la persistencia académica, con `DisableBulkOperations()` y las limitaciones del ADR-0002. ADR-0002 sigue pendiente de ratificación formal: esta especificación no autoriza a ejecutar la implementación hasta que se ratifique.
+- Entity Framework Core InMemory para la persistencia académica, con `DisableBulkOperations()` y las limitaciones del ADR-0002. ADR-0002 fue ratificado por equipo G1 el 2026-11-25 como excepción académica: esta especificación autoriza la implementación del mock en ese alcance, sin datos reales ni producción.
 - xUnit para backend y Playwright para navegador.
 - Servidor OAuth 2.0/OIDC propio, sin proveedores externos, cuando se implemente la fase B.
 - ASP.NET Core Identity para usuarios y contraseñas, y OpenIddict para OAuth 2.0/OIDC, cuando se implemente la fase B.
@@ -591,7 +591,7 @@ Los detalles de versión, compatibilidad y limitaciones están en `docs/g1/diagn
 - Los datos de las personas son ficticios y no representan personas reales.
 - El entorno de desarrollo dispone de .NET SDK 10.0.404, Node.js LTS y acceso a NuGet y npm.
 - La fase B se especificará antes de implementarse; esta especificación no autoriza a escribir el servidor real.
-- La constitución sigue vigente y cualquier excepción de persistencia requiere ratificación.
+- La constitución sigue vigente. La excepción de persistencia de ADR-0002 quedó ratificada por equipo G1 el 2026-11-25 para el alcance académico; cualquier uso con datos reales exige antes la persistencia relacional y su propia decisión.
 - El contrato puede evolucionar; los cambios incompatibles siguen la política de versionado.
 - La audiencia `identity-api` es provisional y no autoriza por sí misma el acceso a G2, G3 o G4; la matriz definitiva es D-016.
 - En v1 no se garantiza la revocación inmediata de access tokens JWT; se garantiza la revocación de sesión/refresh y la expiración del access token por TTL.
@@ -611,7 +611,7 @@ Las decisiones se registran también en `docs/decisions/pending-decisions.md`. L
 | D-006 | 2FA: métodos, obligatoriedad y step-up | Afecta a login, soporte y accesibilidad | TOTP + códigos de recuperación; obligatorio para administradores | Fase B |
 | D-007 | Registro, política de contraseñas, verificación y menores | Afecta a RGPD, UX y datos sensibles | Correo y teléfono obligatorios; verificación; consentimiento de tutor para menores | Fase B |
 | D-008 | Retención y acceso a auditoría | La auditoría contiene datos personales | Retención mínima necesaria, acceso restringido y anonimización | Fase B |
-| D-009 | Persistencia definitiva y migración desde InMemory | InMemory no cumple migraciones ni producción | SQLite o SQL Server/PostgreSQL antes de datos reales; ver ADR-0002 | Producción |
+| D-009 | Persistencia definitiva y migración desde InMemory | InMemory no cumple migraciones ni producción | Excepción académica ratificada por equipo G1 el 2026-11-25 (ADR-0002); SQLite o SQL Server/PostgreSQL antes de datos reales | Producción |
 | D-010 | Proveedores de correo y SMS | Necesarios para verificación y recuperación | Encapsular y elegir proveedor antes de la fase B | Fase B |
 | D-011 | Alojamiento, TLS, gestión de claves y key ring | Sin claves persistentes las sesiones se invalidan al reiniciar | Gestionar claves fuera del repositorio y persistir el key ring | Producción |
 | D-012 | Consentimiento de módulos de primera parte | Afecta a UX y al modelo de autorización | Abierta. El mock solo declara un modo de simulación configurable y NO decide el comportamiento de producción | Fase B |
@@ -621,13 +621,13 @@ Las decisiones se registran también en `docs/decisions/pending-decisions.md`. L
 | D-016 | Audiencias definitivas por API | Un token para `identity-api` no debe aceptarse por defecto en G2/G3/G4 | Decidir la matriz de audiencias antes de la integración; validar `aud` en cada API | Fase B e integración G2/G3/G4 |
 | D-017 | Fuente de los datos de contacto para comunicaciones de G4 | G4 necesita correo o teléfono, pero G1 no debe convertirse en directorio | Resuelta (2026-11-24): G1 solo expone el contacto propio vía `/me` y userinfo; G4 obtiene los contactos de G3 | Fase C (contrato G3-G4) |
 
-D-002, D-003, D-004, D-005 y D-017 quedan cerradas para la fase A en el alcance indicado. D-001 y D-016 siguen abiertas y no bloquean el plan de la fase A; D-004 y D-005 mantienen abiertos sus valores y mecanismos de producción, la verificación de D-003 con G2 corresponde a la fase C y D-017 depende del contrato de contacto de G3.
+D-002, D-003, D-004, D-005 y D-017 quedan cerradas para la fase A en el alcance indicado. D-009 tiene ratificada solo la excepción académica de ADR-0002; su persistencia definitiva sigue abierta. D-001 y D-016 siguen abiertas y no bloquean el plan de la fase A; D-004 y D-005 mantienen abiertos sus valores y mecanismos de producción, la verificación de D-003 con G2 corresponde a la fase C y D-017 depende del contrato de contacto de G3.
 
 ## 9. Dependencias y riesgos
 
 ### 9.1 Dependencias
 
-- Aprobación de esta especificación. ADR-0002 bloquea la implementación de la fase A hasta su ratificación formal. ADR-0001 bloquea la arquitectura de la fase B, pero no impide el mock de fase A con OpenIddict como motor temporal.
+- Aprobación de esta especificación. ADR-0002 quedó ratificado por equipo G1 el 2026-11-25 para el alcance académico, por lo que no bloquea la implementación del mock de fase A. ADR-0001 bloquea la arquitectura de la fase B, pero no impide el mock de fase A con OpenIddict como motor temporal.
 - Ratificación de D-001, D-004 (valores de producción), D-005 (revocación de access tokens) y D-016 (audiencias) antes de la fase B; D-002 y D-003 quedan aprobadas para la fase A, con la verificación de ámbitos de D-003 en la fase C.
 - Disponibilidad de .NET SDK 10.0.404 y de los paquetes verificados.
 - Coordinación con G2, G3 y G4 para la validación del catálogo provisional y la matriz de audiencias.

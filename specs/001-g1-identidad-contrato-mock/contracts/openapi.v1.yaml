@@ -6,7 +6,7 @@ info:
   version: 1.0.0
   summary: Contrato de identidad y mock para G2, G3 y G4 (fase A)
   x-reviewed-at: 2026-11-24
-  x-persistence-exception: "ADR-0002 pendiente de ratificación formal; EF Core InMemory es solo académico."
+  x-persistence-exception: "ADR-0002 ratificado por equipo G1 el 2026-11-25 como excepción académica; EF Core InMemory es solo para desarrollo, demostración y pruebas."
   description: |
     Contrato OpenAPI 3.1 de la API de identidad de G1 y de la superficie OIDC/OAuth
     observable del mock de la fase A.

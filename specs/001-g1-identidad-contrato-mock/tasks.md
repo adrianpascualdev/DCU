@@ -22,7 +22,7 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 - **Estilo**: `.editorconfig` manda (CRLF, 4 espacios; 2 espacios en JSON/csproj/props).
 - **Excepción documentada**: `.github/instructions/coding-style-csharp-project-structure.instructions.md` prefiere Scalar para proyectos nuevos, pero la constitución y el mandato del usuario exigen Swagger UI. Se aplica Swagger UI y se registra la excepción en T059; no se modifica la instrucción.
 - **Skill referenciada ausente**: `coding-style-css-theming.instructions.md` y `coding-style-frontend-design-system.instructions.md` citan `myadmon-theme`, que no existe en `.github/skills/`. La T029 define tokens locales concretos y accesibles hasta que se aporte la skill.
-- **Excepción pendiente**: EF Core InMemory incumple la restricción técnica 4 de la constitución (migraciones versionadas) hasta que se ratifique ADR-0002. **Ninguna tarea de implementación puede ejecutarse antes de esa ratificación.** Las tareas documentales y de validación del contrato pueden prepararse, pero no marcarse como completadas si dependen de código no implementado.
+- **Excepción ratificada**: ADR-0002 fue aprobado por equipo G1 el 2026-11-25 para desarrollo, demostración y pruebas. La excepción no cubre datos reales ni producción: la persistencia definitiva, el proveedor relacional y la prueba de CI con proveedor relacional (T055) siguen pendientes. Las tareas solo se marcan como completadas cuando están implementadas y verificadas.
 
 ## Formato: `[ID] [P?] [Prioridad] [DEVn] [Story?] Descripción`
 
@@ -62,18 +62,18 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 
 **Purpose**: infraestructura que BLOCKA todas las historias. No se inicia ninguna US hasta completarla.
 
-- [ ] T009 [P0] [DEV1] Crear `src/G1.Identity.Mock/Settings/MockOptions.cs`, `OpenIdConnectOptions.cs`, `SessionOptions.cs` y `CorsOptions.cs` con Options pattern, validación fail-fast y los valores de D-004: «código 5 min, access 5 min, ID token 5 min, refresh rotativo 8 h, inactividad 30 min, absoluta 12 h, tolerancia 2 min» (Instrucciones: `coding-style-csharp-settings-classes.instructions.md`, `coding-style-csharp-localization.instructions.md`). **Rama**: `dev1/infra-contract`. **Entregable**: configuración enlazada y validada.
+- [x] T009 [P0] [DEV1] Crear `src/G1.Identity.Mock/Settings/MockOptions.cs`, `OpenIdConnectOptions.cs`, `SessionOptions.cs` y `CorsOptions.cs` con Options pattern, validación fail-fast y los valores de D-004: «código 5 min, access 5 min, ID token 5 min, refresh rotativo 8 h, inactividad 30 min, absoluta 12 h, tolerancia 2 min» (Instrucciones: `coding-style-csharp-settings-classes.instructions.md`, `coding-style-csharp-localization.instructions.md`). **Rama**: `dev1/infra-contract`. **Entregable**: configuración enlazada y validada.
 - [ ] T010 [P0] [DEV3] Crear `src/G1.Identity.Mock/Persistence/G1IdentityDbContext.cs` con EF Core InMemory, `EnsureCreated()`, `DisableBulkOperations()` y sin migraciones; advertencia de volatilidad en logs (Skill: `dotnet-api-architecture`; ADR-0002). **Rama**: `dev3/users-persistence`. **Entregable**: revocación OpenIddict sin `ExecuteUpdate`.
 - [ ] T011 [P] [P0] [DEV3] Crear `src/G1.Identity.Mock/Persistence/Entities/MockPersona.cs`, `Role.cs`, `Permission.cs`, `RolePermission.cs` y `RoleAssignment.cs` cumpliendo literalmente: «`key` y `userId` son únicos.», «Un `userId` no cambia entre reinicios ni entre resets.», «`email` y `phone` nunca se exponen en el resumen de otro usuario.», «Una persona `inactive` o `locked` no puede completar la autorización; el error es genérico.», «Una asignación revocada no contribuye a `roles` ni a `permissions`.» y «`scopeRef` se transporta sin validación de negocio; el módulo propietario lo resuelve.». **Rama**: `dev3/users-persistence`. **Entregable**: entidades con invariantes documentados.
 - [ ] T012 [P] [P0] [DEV3] Crear `src/G1.Identity.Mock/Persistence/Entities/Session.cs`, `SessionToken.cs`, `AuditEvent.cs` y `CatalogSnapshot.cs` cumpliendo literalmente: «Una sesión `revoked` o `expired` no permite `/me`, ni refresh, ni operaciones de identidad.», «`expiresAt` nunca supera `absoluteExpiresAt`.», «El listado solo devuelve sesiones del usuario autenticado y nunca IP ni secretos.», «La sesión actual se marca con `current: true` en la respuesta.» y «No se registran tokens, contraseñas, correos completos ni datos de salud.». **Rama**: `dev3/users-persistence`. **Entregable**: entidades de sesión y auditoría.
-- [ ] T013 [P] [P0] [DEV1] Crear `src/G1.Identity.Mock/Constants.cs` y `src/G1.Identity.Mock/Resources/IdentityMessages.resx` con los códigos de error estables de `contracts/README.md` y textos en castellano (Instrucciones: `coding-style-csharp-constants.instructions.md`, `coding-style-csharp-resource-files.instructions.md`). **Rama**: `dev1/infra-contract`. **Entregable**: sin cadenas mágicas de error en endpoints.
-- [ ] T014 [P0] [DEV1] Crear `src/G1.Identity.Mock/BuilderExtensions.cs`, `AppExtensions.cs` y `Program.cs` con pipeline Minimal API: correlación, CORS sin comodín con credenciales, antiforgery, rate limiting, CSP en Swagger UI, `X-Content-Type-Options: nosniff`, `X-Correlation-ID` y manejador de excepciones (Skill: `dotnet-api-architecture`; Instrucciones: `coding-style-csharp-program.instructions.md`, `coding-style-csharp-app-extensions.instructions.md`, `coding-style-csharp-builder-extensions.instructions.md`). **Rama**: `dev1/infra-contract`. **Entregable**: FR-041 a FR-045 implementados en el pipeline.
+- [x] T013 [P] [P0] [DEV1] Crear `src/G1.Identity.Mock/Constants.cs` y `src/G1.Identity.Mock/Resources/IdentityMessages.resx` con los códigos de error estables de `contracts/README.md` y textos en castellano (Instrucciones: `coding-style-csharp-constants.instructions.md`, `coding-style-csharp-resource-files.instructions.md`). **Rama**: `dev1/infra-contract`. **Entregable**: sin cadenas mágicas de error en endpoints.
+- [x] T014 [P0] [DEV1] Crear `src/G1.Identity.Mock/BuilderExtensions.cs`, `AppExtensions.cs` y `Program.cs` con pipeline Minimal API: correlación, CORS sin comodín con credenciales, antiforgery, rate limiting, CSP en Swagger UI, `X-Content-Type-Options: nosniff`, `X-Correlation-ID` y manejador de excepciones (Skill: `dotnet-api-architecture`; Instrucciones: `coding-style-csharp-program.instructions.md`, `coding-style-csharp-app-extensions.instructions.md`, `coding-style-csharp-builder-extensions.instructions.md`). **Rama**: `dev1/infra-contract`. **Entregable**: FR-041 a FR-045 implementados en el pipeline.
 - [ ] T015 [P0] [DEV2] Configurar OpenIddict 7.8.0 en `src/G1.Identity.Mock/Auth/OpenIddictConfiguration.cs`: solo `authorization_code` + `refresh_token`, PKCE S256 obligatorio, scopes `openid profile email offline_access identity.api`, clave RSA efímera, sin introspección, sin implicit, password ni `client_credentials` (Skills: `dotnet-api-architecture` y `microsoft-docs-and-code-consultant`, esta última solo si el MCP de Microsoft Learn está disponible). **Rama**: `dev2/oauth-oidc`. **Entregable**: descubrimiento y JWKS sin grants prohibidos.
 - [ ] T016 [P] [P0] [DEV3] Configurar la autenticación de persona del mock en `src/G1.Identity.Mock/Auth/MockPersonaAuthentication.cs` con cookie `__Host-g1.session` HttpOnly/Secure/SameSite=Lax y antiforgery en escrituras; el parámetro `mock_persona` solo se acepta en `Development`/`Testing` y no emite tokens por sí mismo (Skill: `dotnet-api-architecture`). **Rama**: `dev3/users-persistence`. **Entregable**: cookie de desarrollo sin emisión directa de JWT.
 - [ ] T017 [P0] [DEV3] Crear `src/G1.Identity.Mock/Fixtures/SeedData.cs` con **15 personas ficticias**, 10 roles, 3 permisos de G1, la matriz deny-by-default exacta de `data-model.md` y los 4 escenarios `token.*` como casos de token, no como personas; seeding idempotente. **Rama**: `dev3/users-persistence`. **Entregable**: `fixtureVersion` estable y reset reproducible.
 - [ ] T018 [P] [P0] [DEV4] Crear `src/G1.Identity.Mock/Endpoints/ErrorMapping.cs` para `application/problem+json` (RFC 9457) con `code` y `traceId`, separado de los errores OAuth estándar. **Rama**: `dev4/authz-audit`. **Entregable**: todos los errores de API con esquema documentado; SC-004.
 
-**Checkpoint**: base lista; las seis historias pueden comenzar. **ADR-0002 debe estar ratificado antes de ejecutar estas tareas.**
+**Checkpoint**: base lista; las seis historias pueden comenzar cuando sus propias dependencias estén listas. **ADR-0002 quedó ratificado por equipo G1 el 2026-11-25; la excepción se limita al alcance académico.**
 
 ---
 
@@ -239,7 +239,7 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: sin dependencias; T002 bloquea T003-T005; T008 es documental y paralela.
-- **Foundational (Phase 2)**: depende de Setup; T010 bloquea T011/T012/T017; T014 bloquea todos los endpoints; T015 bloquea US2; T016 bloquea US5 y el selector; T009 bloquea la configuración de TTL. **Puerta**: ratificación de ADR-0002 antes de ejecutar.
+- **Foundational (Phase 2)**: depende de Setup; T010 bloquea T011/T012/T017; T014 bloquea todos los endpoints; T015 bloquea US2; T016 bloquea US5 y el selector; T009 bloquea la configuración de TTL. **Puerta**: ADR-0002 ratificada por equipo G1 el 2026-11-25 para el alcance académico; la persistencia relacional sigue pendiente para datos reales.
 - **User Stories (Phase 3-8)**: dependen de Foundational. US1 y US2 son P1 y pueden avanzar en paralelo; US3 depende de T031 para `/me` con Bearer y de T035 para permisos; US4 depende de la sesión creada en US2; US5 depende de T016/T017 y T028; US6 depende de que las historias anteriores existan para cubrir las 19 operaciones.
 - **Polish (Phase 9)**: depende de US1-US6; T064 y T065 son las últimas.
 
@@ -297,7 +297,7 @@ Task: "Servir el build desde AppExtensions.cs y wwwroot/"
 
 ### MVP First (US1 + US2)
 
-1. Completar Phase 1 y Phase 2. **Parada obligatoria**: ratificar ADR-0002.
+1. Completar Phase 1 y Phase 2. **Puerta cumplida**: ADR-0002 ratificado por equipo G1 el 2026-11-25 dentro del alcance académico.
 2. Completar Phase 3 (US1): contrato navegable y CI de rupturas. Validar de forma aislada.
 3. Completar Phase 4 (US2): flujo PKCE y `/me`. Validar de forma aislada.
 4. **STOP and VALIDATE**: ejecutar `quickstart.md` secciones 2 a 6. Este es el primer entregable útil para G2, G3 y G4.
@@ -360,14 +360,14 @@ Task: "Servir el build desde AppExtensions.cs y wwwroot/"
 - `[Story]` = trazabilidad con `spec.md`; no se añade en Setup, Foundational ni Polish.
 - Cada historia tiene prueba independiente y checkpoint; no se omiten.
 - No se genera código de aplicación en este comando: solo este `tasks.md`, `spec.md`, `plan.md`, contratos y documentación de equipo.
-- No se ejecuta implementación sin ratificación de ADR-0002 y aprobación explícita del listado.
+- ADR-0002 está ratificado para el alcance académico; no se ejecuta ninguna tarea fuera del listado aprobado ni se usa InMemory con datos reales.
 - La responsabilidad de pruebas y documentación es de quien ejecuta cada tarea; el PR se rechaza si falta alguna.
 
 ## Bloqueos pendientes (no resueltos por estas tareas)
 
 | Bloqueo | Estado | Impacto |
 | --- | --- | --- |
-| ADR-0002 (InMemory frente a migraciones de la constitución) | Pendiente de ratificación | Bloquea Phase 2 y, por tanto, todas las historias; no se simula su aprobación |
+| Persistencia relacional y migraciones (D-009) | ADR-0002 ratificado solo para el alcance académico (equipo G1, 2026-11-25) | Bloquea datos reales y producción; T055 y el plan de migración siguen pendientes |
 | ADR-0001 (servidor OAuth real con Identity + OpenIddict) | Propuesto | Bloquea la fase B; no bloquea el mock de fase A |
 | D-001 (BFF/SPA), D-012 (consentimiento), D-016 (audiencias) | Abiertas | No se resuelven en código; el contrato y el mock las declaran provisionales o configurables |
 | D-004 (valores de producción) y D-005 (revocación de JWT en producción) | Parciales | Solo se aplican los valores de desarrollo aprobados |
@@ -387,7 +387,7 @@ El reparto siguiente orienta la planificación de nuevas especificaciones. **No 
 | --- | --- | --- |
 | DEV1 | Arquitectura del servidor real, despliegue, CI/CD, contrato v2 si aplica | Contrato v1 estable y ADR-0001 ratificada |
 | DEV2 | Identity + OpenIddict, login, emisión, refresco, logout y claves | D-001, D-004 (producción), D-005 y D-016 decididas |
-| DEV3 | Registro, verificación, recuperación, 2FA y persistencia real | D-007, D-010, D-011 y ADR-0002 ratificada o sustituida |
+| DEV3 | Registro, verificación, recuperación, 2FA y persistencia real | D-007, D-010, D-011 y persistencia relacional pendiente (ADR-0002 solo cubre el alcance académico) |
 | DEV4 | Catálogo definitivo, asignación auditada, políticas y retención | D-002, D-006, D-008 y D-013 decididas |
 | DEV5 | Cliente web definitivo, BFF o SPA según D-001, E2E de producción | D-001 y D-016 decididas |
 

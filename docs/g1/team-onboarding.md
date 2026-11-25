@@ -21,7 +21,7 @@
 
 Extensiones de VS Code recomendadas: C# Dev Kit, ESLint, markdownlint, PowerShell. La lista completa está en el [`README.md`](../../README.md).
 
-> **Puerta**: ADR-0002 está pendiente de ratificación formal. Puedes clonar, leer y preparar documentación, pero **no ejecutes tareas de implementación** hasta que se ratifique. No se modifica `.specify/memory/constitution.md`.
+> **Puerta**: ADR-0002 fue ratificado por equipo G1 el 2026-11-25 como excepción académica. Ejecuta solo las tareas asignadas dentro de ese alcance; no uses datos reales ni modifiques `.specify/memory/constitution.md`. La persistencia relacional sigue pendiente antes de datos reales o producción.
 
 ## 2. Clonar y crear tu rama
 
@@ -111,7 +111,7 @@ Los comandos Spec Kit de este repositorio están en `.opencode/commands/`. Se ej
 
 **Importante para la fase A**: `spec.md`, `plan.md`, `tasks.md`, contratos y documentación ya existen y han sido revisados. No vuelvas a ejecutar `/speckit.tasks` ni `/speckit.implement` sobre esta rama sin acuerdo explícito: sobrescribiría el reparto DEV1–DEV5 y las correcciones aplicadas. Usa `/speckit.analyze` solo para verificar, y propón cambios por PR.
 
-Regla de gobernanza: si cambias un requisito, actualiza primero `spec.md` y el contrato; después el plan y las tareas; y solo entonces el código. Ningún comando debe dar por ratificada ADR-0002 ni modificar la constitución.
+Regla de gobernanza: si cambias un requisito, actualiza primero `spec.md` y el contrato; después el plan y las tareas; y solo entonces el código. ADR-0002 ya está ratificada por equipo G1; ningún comando debe modificar la constitución ni ampliar la ratificación a datos reales o producción.
 
 ## 6. Ejecutar una tarea asignada
 
@@ -150,7 +150,7 @@ Abre el PR contra `001-g1-identidad-contrato-mock` (nunca contra `main` directam
 - Pruebas ejecutadas y resultado (incluidas las de tu propio código).
 - Documentación actualizada (`docs/g1/...`, XML docs o README según corresponda).
 - Requisitos/SC afectados y si el contrato cambió (si cambió, revisión de DEV1 y aviso a consumidores).
-- Confirmación de que ADR-0002 sigue pendiente y de que no se modificó la constitución ni se resolvieron D-001/D-012/D-016.
+- Confirmación de que ADR-0002 está ratificada solo para el alcance académico y de que no se modificó la constitución ni se resolvieron D-001/D-012/D-016.
 
 Antes de pedir revisión, carga la skill `code-review` y aplica los hallazgos de gravedad alta. El revisor comprueba propiedad de archivos, pruebas, documentación y trazabilidad. Tras el merge, sincroniza tu rama:
 
@@ -164,7 +164,7 @@ git rebase origin/001-g1-identidad-contrato-mock
 
 ## 8. Reglas de oro
 
-- ADR-0002 pendiente: no implementar hasta su ratificación formal; no simular aprobación ni editar la constitución.
+- ADR-0002 ratificada por equipo G1 el 2026-11-25 solo para el alcance académico; no ampliarla a datos reales ni editar la constitución.
 - El contrato `contracts/openapi.v1.yaml` es la fuente de verdad; un cambio incompatible exige `v2` y nota de migración.
 - `mock/reset` no usa token en v1 y solo existe en `Development`/`Testing`; las claves `token.*` son escenarios, no personas.
 - El único emisor de tokens es `/connect/token` con PKCE S256; la UI nunca guarda tokens.
@@ -189,5 +189,5 @@ git rebase origin/001-g1-identidad-contrato-mock
 - [`team-assignment.md`](./team-assignment.md) — reparto, ramas, propiedad de archivos y entregables.
 - [`specs/001-g1-identidad-contrato-mock/tasks.md`](../../specs/001-g1-identidad-contrato-mock/tasks.md) — T001–T072 con responsable, prioridad y `[P]`.
 - [`specs/001-g1-identidad-contrato-mock/quickstart.md`](../../specs/001-g1-identidad-contrato-mock/quickstart.md) — validación y cobertura SC.
-- [`docs/decisions/pending-decisions.md`](../decisions/pending-decisions.md) — D-001 a D-017, con ADR-0002 pendiente.
+- [`docs/decisions/pending-decisions.md`](../decisions/pending-decisions.md) — D-001 a D-017; ADR-0002 ratificada para el alcance académico y D-009 abierta para persistencia definitiva.
 - [Documentación de OpenCode V2](https://opencode.ai/v2/docs/) — configuración y skills.

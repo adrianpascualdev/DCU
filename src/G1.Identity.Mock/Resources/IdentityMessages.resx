@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IssuerRequired" xml:space="preserve">
+    <value>El emisor de identidad es obligatorio.</value>
+  </data>
+  <data name="IssuerMustBeHttps" xml:space="preserve">
+    <value>El emisor de identidad debe ser una URL absoluta HTTPS.</value>
+  </data>
+  <data name="AudienceRequired" xml:space="preserve">
+    <value>La audiencia de identidad es obligatoria.</value>
+  </data>
+  <data name="ClientIdRequired" xml:space="preserve">
+    <value>El identificador del cliente es obligatorio.</value>
+  </data>
+  <data name="ScopesRequired" xml:space="preserve">
+    <value>Debe configurarse al menos un ámbito de identidad.</value>
+  </data>
+  <data name="LifetimesRequired" xml:space="preserve">
+    <value>La configuración de duraciones de tokens es obligatoria.</value>
+  </data>
+  <data name="SessionRequiredOption" xml:space="preserve">
+    <value>La configuración de la sesión es obligatoria.</value>
+  </data>
+  <data name="AllowedOriginsNoWildcard" xml:space="preserve">
+    <value>La lista de orígenes CORS no admite comodines con credenciales.</value>
+  </data>
+  <data name="AllowedOriginsMustBeAbsolute" xml:space="preserve">
+    <value>Los orígenes CORS deben ser URL absolutas HTTP o HTTPS.</value>
+  </data>
+  <data name="LifetimeRange" xml:space="preserve">
+    <value>La duración configurada debe estar entre {1} y {2}.</value>
+  </data>
+  <data name="ClockSkewRange" xml:space="preserve">
+    <value>La tolerancia de reloj debe estar entre cero y dos minutos.</value>
+  </data>
+  <data name="SessionTimeoutRange" xml:space="preserve">
+    <value>El tiempo de la sesión debe ser mayor que cero y no superar las 48 horas.</value>
+  </data>
+  <data name="IdleLessThanAbsolute" xml:space="preserve">
+    <value>El tiempo de inactividad debe ser menor que la duración absoluta de la sesión.</value>
+  </data>
+  <data name="ErrorSessionRequiredTitle" xml:space="preserve">
+    <value>Sesión requerida</value>
+  </data>
+  <data name="ErrorSessionRequiredDetail" xml:space="preserve">
+    <value>Debes iniciar sesión para acceder a este recurso.</value>
+  </data>
+  <data name="ErrorSessionInvalidTitle" xml:space="preserve">
+    <value>Sesión inválida</value>
+  </data>
+  <data name="ErrorSessionInvalidDetail" xml:space="preserve">
+    <value>La credencial ha caducado o no es válida.</value>
+  </data>
+  <data name="ErrorPermissionDeniedTitle" xml:space="preserve">
+    <value>Permiso insuficiente</value>
+  </data>
+  <data name="ErrorPermissionDeniedDetail" xml:space="preserve">
+    <value>No tienes permiso para consultar este recurso.</value>
+  </data>
+  <data name="ErrorUserNotFoundTitle" xml:space="preserve">
+    <value>Recurso no encontrado</value>
+  </data>
+  <data name="ErrorUserNotFoundDetail" xml:space="preserve">
+    <value>El recurso solicitado no existe o no es visible.</value>
+  </data>
+  <data name="ErrorRequestInvalidTitle" xml:space="preserve">
+    <value>Petición inválida</value>
+  </data>
+  <data name="ErrorRequestInvalidDetail" xml:space="preserve">
+    <value>El cuerpo, los parámetros o las cabeceras de la petición no son válidos.</value>
+  </data>
+  <data name="ErrorRateLimitedTitle" xml:space="preserve">
+    <value>Demasiadas peticiones</value>
+  </data>
+  <data name="ErrorRateLimitedDetail" xml:space="preserve">
+    <value>Inténtalo de nuevo más tarde.</value>
+  </data>
+  <data name="ErrorInternalTitle" xml:space="preserve">
+    <value>Error interno</value>
+  </data>
+  <data name="ErrorInternalDetail" xml:space="preserve">
+    <value>Se ha producido un error inesperado.</value>
+  </data>
+</root>

@@ -2,7 +2,7 @@
 
 **Feature**: `001-g1-identidad-contrato-mock` | **Fecha**: 2026-11-24
 
-Modelo de datos del mock de identidad. No es el modelo definitivo de producción: describe las entidades necesarias para que el contrato sea ejecutable y verificable en la fase A. El modelo es agnóstico del proveedor y se implementa con EF Core InMemory según ADR-0002, **pendiente de ratificación formal**; esta condición bloquea la ejecución de las tareas de implementación, no la edición documental.
+Modelo de datos del mock de identidad. No es el modelo definitivo de producción: describe las entidades necesarias para que el contrato sea ejecutable y verificable en la fase A. El modelo es agnóstico del proveedor y se implementa con EF Core InMemory según ADR-0002, **ratificado por equipo G1 el 2026-11-25 como excepción académica**; la excepción no cubre datos reales ni producción y la persistencia relacional sigue pendiente en D-009.
 
 Convenciones generales:
 

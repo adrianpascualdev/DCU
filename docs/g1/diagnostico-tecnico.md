@@ -368,7 +368,7 @@ InMemory es útil para el alcance académico, pero no es una base de datos de pr
 - El key ring de Data Protection se pierde si no se persiste; las cookies y tokens protegidos se invalidan.
 - El rate limiting en memoria es por instancia; no sirve para un despliegue con varias instancias.
 
-Estas limitaciones contradicen la restricción técnica 4 y el principio V. El ADR-0002 registra la excepción y exige ratificación. Si no se ratifica, la alternativa es SQLite o SQL Server/PostgreSQL antes de la fase B.
+Estas limitaciones contradicen la restricción técnica 4 y el principio V. El ADR-0002 registra la excepción, ratificada por equipo G1 el 2026-11-25 para desarrollo, demostración y pruebas. La alternativa SQLite o SQL Server/PostgreSQL sigue siendo obligatoria antes de datos reales o producción.
 
 ## 9. Cumplimiento de la constitución
 
@@ -424,7 +424,7 @@ Las que bloquean producción son D-009 (persistencia), D-010 (correo/SMS), D-011
 ### Fase 0: ratificación
 
 - Aprobar `specs/001-g1-identidad-contrato-mock/spec.md`.
-- Aprobar el ADR-0001 y el ADR-0002, o sustituir InMemory por SQLite.
+- ADR-0002 ratificado por equipo G1 el 2026-11-25 para el alcance académico; ADR-0001 sigue pendiente y la persistencia relacional sigue siendo necesaria antes de datos reales.
 - Ratificar D-001, D-004 y D-005 antes de la fase B; D-002 y D-003 quedan aprobadas para la fase A, con su validación formal pendiente.
 - Confirmar el catálogo mínimo de roles y permisos con G2, G3 y G4.
 
@@ -477,13 +477,13 @@ Estas verificaciones son condiciones de la fase B, no de la fase A. El contrato 
 
 ## 14. Recomendación
 
-1. **Aprobar la especificación 001 y los ADR-0001 y ADR-0002**, o cambiar InMemory por SQLite si se exige cumplir la restricción de migraciones.
+1. **ADR-0002 ratificado por equipo G1 el 2026-11-25** para el alcance académico. La especificación 001 y ADR-0001 siguen pendientes de aprobación; antes de datos reales hay que cambiar InMemory por SQLite o SQL Server/PostgreSQL con migraciones.
 2. **Ratificar D-001 a D-005** antes de implementar el servidor real.
 3. **Implementar primero el contrato y el mock**, con OpenAPI 3.1, Swagger UI, Authorization Code + PKCE, personas ficticias y pruebas de contrato.
 4. **No implementar la fase B** hasta completar la prueba HTTP, la gestión de claves y la revisión de seguridad.
 5. **No usar InMemory con datos reales** ni declarar que cumple migraciones.
 
-La solución es técnicamente viable y está alineada con la constitución, salvo la excepción de persistencia, que debe ratificarse de forma explícita. El mayor riesgo no es la compatibilidad de las bibliotecas, sino la falsa confianza que produciría un mock o un InMemory que se parezcan a producción sin serlo.
+La solución es técnicamente viable y está alineada con la constitución, salvo la excepción de persistencia, ratificada de forma explícita por equipo G1 el 2026-11-25 y limitada al alcance académico. El mayor riesgo no es la compatibilidad de las bibliotecas, sino la falsa confianza que produciría un mock o un InMemory que se parezcan a producción sin serlo.
 
 ## 15. Referencias
 

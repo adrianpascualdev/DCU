@@ -12,7 +12,7 @@ Este documento es la fuente de verdad del reparto, las ramas, la propiedad de ar
 
 ## 1. Puertas de entrada (antes de tocar código)
 
-1. **ADR-0002 sigue pendiente de ratificación formal.** Es un requisito académico del profesor: EF Core InMemory se conserva con `DisableBulkOperations()`, pero la constitución exige migraciones versionadas. La ratificación bloquea la Phase 2 y, por tanto, todas las historias. No se modifica `.specify/memory/constitution.md` ni se simula la aprobación.
+1. **ADR-0002 ratificada por equipo G1 el 2026-11-25** como excepción académica, siguiendo las indicaciones del profesor. EF Core InMemory se conserva con `DisableBulkOperations()`, pero la constitución exige migraciones versionadas: la excepción no cubre datos reales ni producción y no modifica `.specify/memory/constitution.md`. La Phase 2 puede ejecutarse en este alcance; la persistencia relacional sigue pendiente.
 2. ADR-0001 está propuesta: bloquea la arquitectura de la fase B, no el mock de fase A con OpenIddict como motor temporal.
 3. D-001, D-012 y D-016 quedan abiertas. El contrato admite cookie y Bearer, declara el consentimiento como simulación configurable y marca `aud=identity-api` como provisional para access tokens; el ID token usa `aud=client_id`. Nadie debe resolver estas decisiones en código.
 4. Las skills de `.github/skills/` se conservan sin cambios. GitHub Copilot las descubre por su `name`/`description`; OpenCode las descubre desde `opencode.jsonc` (`"skills": ["./.github/skills"]`), comprobado cargando `dotnet-api-architecture`.
@@ -147,7 +147,7 @@ flowchart LR
 - El marcador `[P]` solo aparece cuando los archivos son distintos y no hay dependencias pendientes.
 - Cada tarea lleva asociado un archivo concreto, un entregable verificable y sus propias pruebas/documentación.
 - No existen tareas de fase B/C mezcladas con la fase A.
-- No se edita la constitución ni se registra ADR-0002 como ratificada.
+- No se edita la constitución. ADR-0002 queda registrada como ratificada solo para el alcance académico (equipo G1, 2026-11-25).
 - Las 19 operaciones del contrato y los SC-001 a SC-012 están trazados en `tasks.md` y `quickstart.md`.
 
 ---
@@ -162,7 +162,7 @@ Estas filas son una **previsión de responsabilidades**. No generan tareas en `t
 | --- | --- | --- |
 | DEV1 | Arquitectura del servidor real, despliegue, CI/CD, contrato `v2` si procede | ADR-0001 ratificada; contrato v1 estable |
 | DEV2 | ASP.NET Core Identity + OpenIddict: login, emisión, refresco, logout y gestión de claves | D-001, D-004 (producción), D-005, D-016 |
-| DEV3 | Registro, verificación de correo/teléfono, recuperación, 2FA y persistencia real | D-007, D-010, D-011; ADR-0002 ratificada o sustituida |
+| DEV3 | Registro, verificación de correo/teléfono, recuperación, 2FA y persistencia real | D-007, D-010, D-011; persistencia relacional pendiente (ADR-0002 solo cubre el alcance académico) |
 | DEV4 | Catálogo definitivo, asignación auditada, políticas y retención de auditoría | D-002 (ratificación), D-006, D-008, D-013 |
 | DEV5 | Cliente web definitivo (BFF o SPA), E2E de producción y accesibilidad | D-001 y D-016 |
 

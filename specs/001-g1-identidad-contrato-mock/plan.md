@@ -60,7 +60,7 @@ La autorización se resuelve con códigos estables de rol y permiso; G1 no inter
 | II. Arquitectura modular e independiente | G1 es propietario de identidad; los consumidores usan REST versionado y `userId`; el mock no lee datos de otros módulos. | PASS |
 | III. Desarrollo guiado por contratos (API-First) | El contrato OpenAPI 3.1 se escribe antes del mock, con métodos, rutas, seguridad, esquemas, errores y versión; CI detecta rupturas. | PASS |
 | IV. Seguridad, privacidad e identidad única (NON-NEGOTIABLE) | Denegación por defecto, permisos efectivos en servidor, PKCE S256, sesiones revocables, minimización, sin secretos y auditoría. El mock no es vía alternativa de autorización. | PASS con verificación obligatoria en pruebas |
-| V. Integridad de datos y trazabilidad | Estado del mock determinista, reset idempotente y auditoría de eventos. InMemory no ofrece migraciones, restricciones ni recuperación. | **CONDICIONAL**: excepción ADR-0002 pendiente de ratificación |
+| V. Integridad de datos y trazabilidad | Estado del mock determinista, reset idempotente y auditoría de eventos. InMemory no ofrece migraciones, restricciones ni recuperación. | **EXCEPCIÓN RATIFICADA**: ADR-0002, equipo G1, 2026-11-25; solo alcance académico |
 | VI. Experiencia por rol, accesibilidad e idioma | Selector de personas accesible WCAG 2.1 AA, textos en castellano, códigos estables en inglés y estados de carga/vacío/error. | PASS |
 | VII. Calidad comprobable y pruebas | xUnit para contrato e integración, Playwright para E2E, pruebas de acceso permitido y denegado, accesibilidad y regresión. | PASS |
 | VIII. Simplicidad y mantenimiento | OpenIddict evita un servidor OAuth casero; no se añaden capas ni servicios innecesarios; las decisiones transversales están en ADR. | PASS |
@@ -69,7 +69,7 @@ La autorización se resuelve con códigos estables de rol y permiso; G1 no inter
 | Restricción técnica 1: React + TypeScript independiente | El selector se construye con React + TypeScript y build propio; el backend no depende de Node.js. | PASS |
 | Restricción técnica 2: .NET 10, C# 14 y Minimal APIs | TFM `net10.0`, C# 14 y Minimal APIs; sin controladores MVC. | PASS |
 | Restricción técnica 3: OpenAPI + Swagger UI | `Microsoft.AspNetCore.OpenApi` genera OpenAPI 3.1; `Swashbuckle.AspNetCore.SwaggerUI` sirve la UI; deshabilitada fuera de desarrollo. | PASS |
-| Restricción técnica 4: migraciones versionadas | InMemory no soporta migraciones ni restricciones. Se aplica la excepción académica de ADR-0002, aún no ratificada. | **CONDICIONAL**: requiere ratificación previa a la implementación |
+| Restricción técnica 4: migraciones versionadas | InMemory no soporta migraciones ni restricciones. Se aplica la excepción académica de ADR-0002, ratificada por equipo G1 el 2026-11-25. | **EXCEPCIÓN RATIFICADA**: no se declara cumplimiento de migraciones; persistencia relacional pendiente para datos reales |
 | Restricción técnica 7: xUnit y Playwright | xUnit v3 y Playwright 1.64.1, tal como exige la constitución. | PASS |
 | Decisión D-017: contacto de terceros | No se publica endpoint de contacto ajeno; userinfo solo devuelve datos propios; G4 obtiene contactos de G3. | PASS |
 | Decisión D-003: ámbitos | G1 emite roles/permisos y no interpreta ámbitos; cada módulo los resuelve con `userId`. | PASS |
@@ -77,12 +77,12 @@ La autorización se resuelve con códigos estables de rol y permiso; G1 no inter
 
 **Puertas bloqueantes antes de implementar**:
 
-1. Ratificación de ADR-0002 (excepción de InMemory) o sustitución por SQLite/SQL Server/PostgreSQL. Sin ello, la implementación incumpliría la restricción técnica 4.
+1. Ratificación de ADR-0002 (excepción de InMemory): cumplida por equipo G1 el 2026-11-25 para el alcance académico. La sustitución por SQLite/SQL Server/PostgreSQL sigue siendo obligatoria antes de datos reales.
 2. Aprobación de esta especificación y del plan.
 3. Aprobación de ADR-0001 para la arquitectura de la fase B; la fase A puede avanzar con OpenIddict como motor del mock, pero la decisión definitiva del servidor real sigue condicionada.
 4. Ninguna decisión pendiente se resolverá por defecto en código; el mock las expone como configuración o como ausencia explícita.
 
-**Reevaluación tras el diseño (fase 1)**: el contrato generado no añade endpoints de contacto, introspección ni grants prohibidos; la matriz sigue siendo deny-by-default; no aparecen nuevas violaciones. La única excepción sigue siendo la persistencia InMemory (ADR-0002). No se modifica la constitución.
+**Reevaluación tras el diseño (fase 1)**: el contrato generado no añade endpoints de contacto, introspección ni grants prohibidos; la matriz sigue siendo deny-by-default; no aparecen nuevas violaciones. La única excepción sigue siendo la persistencia InMemory (ADR-0002, ratificada por equipo G1 el 2026-11-25 para el alcance académico). No se modifica la constitución.
 
 ### Decisiones respetadas en este plan
 
@@ -193,7 +193,7 @@ Decisiones principales:
 
 | Violación | Por qué es necesaria | Alternativa simple rechazada |
 | --- | --- | --- |
-| InMemory en lugar de migraciones versionadas | Requisito académico explícito y arranque sin infraestructura; ADR-0002 documenta la excepción y sus límites | SQLite en archivo cumple migraciones, pero añade gestión de archivo y no es la persistencia solicitada; queda como alternativa si no se ratifica la excepción |
+| InMemory en lugar de migraciones versionadas | Requisito académico explícito y arranque sin infraestructura; ADR-0002 documenta la excepción ratificada y sus límites | SQLite en archivo cumple migraciones, pero añade gestión de archivo y no es la persistencia solicitada; sigue siendo la alternativa obligatoria antes de datos reales |
 | OpenIddict dentro del mock | Evita un servidor OAuth casero y mantiene el mismo motor que la fase B; el mock solo aporta personas y datos ficticios | Un mock con endpoints OAuth simulados sería más simple, pero se desviaría del protocolo real y crearía una falsa confianza |
 | Proyecto React separado para el selector | La constitución exige React + TypeScript y el selector debe ser accesible y reutilizable en la fase B | HTML estático sería más simple, pero incumpliría la restricción de frontend y duplicaría estilos/accesibilidad |
 | Prueba de compatibilidad con SQLite | Mitigación obligatoria del ADR-0002 para detectar diferencias de proveedor | Confiar solo en InMemory ocultaría errores relacionales |

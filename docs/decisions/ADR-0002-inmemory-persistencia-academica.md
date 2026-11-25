@@ -1,8 +1,9 @@
 # ADR-0002: EF Core InMemory como persistencia académica
 
-- **Estado**: Propuesto — requiere excepción formal y ratificación
-- **Fecha**: 2026-11-11
-- **Decisores**: responsable del proyecto y equipo G1
+- **Estado**: Aceptado — excepción académica ratificada
+- **Fecha**: 2026-11-11 (propuesta)
+- **Ratificación**: 2026-11-25 — aprobada por equipo G1
+- **Decisores**: equipo G1
 - **Alcance**: persistencia de G1 durante desarrollo, demostración y pruebas
 - **Relacionado**: `ADR-0001-servidor-oauth-propio-identity-openiddict.md`, `specs/001-g1-identidad-contrato-mock/spec.md`
 
@@ -123,6 +124,12 @@ Este ADR **no enmienda la constitución**. Registra una excepción académica y 
 6. Se documenta la pérdida de datos y la ausencia de copias de seguridad en README y Swagger.
 
 Si no se ratifica, se sustituye InMemory por SQLite en archivo o por SQL Server/PostgreSQL, se generan migraciones y se actualiza este ADR como reemplazado.
+
+### Ratificación registrada (2026-11-25)
+
+El **equipo G1** aprobó la excepción académica el **2026-11-25**, siguiendo las indicaciones del profesor. No se han inventado nombres, firmas ni aprobaciones adicionales. La ratificación autoriza únicamente el alcance descrito en la sección 2: desarrollo, demostración y pruebas de las fases A/B, sin datos reales ni producción.
+
+Sigue pendiente, y se registra como trabajo futuro, la prueba de CI con un proveedor relacional (T055, responsabilidad de DEV3). La elección del proveedor relacional definitivo y el plan de migración antes de datos reales permanecen abiertos en D-009. Esta ratificación no modifica `.specify/memory/constitution.md` ni declara cumplida la restricción técnica 4.
 
 ## 10. Disparadores de revisión
 
