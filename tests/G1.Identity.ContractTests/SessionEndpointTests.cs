@@ -125,7 +125,7 @@ namespace G1.Identity.ContractTests
             using var foreign = await host.Client.GetAsync(Constants.Paths.Sessions, cancellationToken);
             await ContractResponseAssertions.MatchesAsync(foreign, Constants.Paths.Sessions, @"get", HttpStatusCode.Unauthorized, cancellationToken);
 
-            using var stillForeign = await host.Client.PostAsync(Constants.Paths.Logout, null, cancellationToken);
+            using var stillForeign = await PostWithBearerAsync(host.Client, Constants.Paths.Logout, cancellationToken);
             await ContractResponseAssertions.MatchesAsync(stillForeign, Constants.Paths.Logout, @"post", HttpStatusCode.Unauthorized, cancellationToken);
 
             await using var revokedHost = await CreateHostAsync(cancellationToken);
@@ -134,8 +134,15 @@ namespace G1.Identity.ContractTests
 
             using var revoked = await revokedHost.Client.GetAsync(Constants.Paths.Sessions, cancellationToken);
             await ContractResponseAssertions.MatchesAsync(revoked, Constants.Paths.Sessions, @"get", HttpStatusCode.Unauthorized, cancellationToken);
-            using var revokeAll = await revokedHost.Client.PostAsync(Constants.Paths.RevokeAllSessions, null, cancellationToken);
+            using var revokeAll = await PostWithBearerAsync(revokedHost.Client, Constants.Paths.RevokeAllSessions, cancellationToken);
             await ContractResponseAssertions.MatchesAsync(revokeAll, Constants.Paths.RevokeAllSessions, @"post", HttpStatusCode.Unauthorized, cancellationToken);
+        }
+
+        private static async Task<HttpResponseMessage> PostWithBearerAsync(HttpClient client, string path, CancellationToken token)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, path);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(@"Bearer", @"fixture");
+            return await client.SendAsync(request, token);
         }
 
         private static async Task<HttpResponseMessage> DeleteAsync(HttpClient client, string sessionId, CancellationToken token)
