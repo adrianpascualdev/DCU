@@ -183,6 +183,96 @@ namespace G1.Identity.ContractTests
             Assert.Equal(scopeRef, assignment.ScopeRef);
         }
 
+        /// <summary>
+        /// Verifica que una sesión Revoked o Expired no permite operaciones.
+        /// </summary>
+        /// <param name="status">El estado de la sesión.</param>
+        [Theory]
+        [InlineData(SessionStatus.Revoked)]
+        [InlineData(SessionStatus.Expired)]
+        public void Session_RevokedOrExpired_ShouldNotBeActive(SessionStatus status)
+        {
+            // Arrange
+            var session = new Session { Status = status };
+
+            // Act
+            var isActive = session.IsActive();
+
+            // Assert
+            Assert.False(isActive, $"Una sesión en estado {status} no debería estar activa.");
+        }
+
+        /// <summary>
+        /// Verifica que ExpiresAt nunca supera AbsoluteExpiresAt.
+        /// </summary>
+        [Fact]
+        public void Session_ExpiresAt_ShouldNotExceedAbsoluteExpiresAt()
+        {
+            // Arrange
+            var now = DateTimeOffset.UtcNow;
+            var session = new Session
+            {
+                AbsoluteExpiresAt = now.AddHours(1),
+                ExpiresAt = now.AddHours(2)
+            };
+
+            // Act
+            var isValid = session.HasValidExpirations();
+
+            // Assert
+            Assert.False(isValid, "ExpiresAt no debería superar AbsoluteExpiresAt.");
+        }
+
+        /// <summary>
+        /// Verifica que AuditEvent no expone secretos ni tokens en los metadatos.
+        /// </summary>
+        [Fact]
+        public void AuditEvent_ShouldNotExposeSecrets()
+        {
+            // Arrange
+            var audit = new AuditEvent();
+            var metadata = new Dictionary<string, string>
+            {
+                { "token", "secret_value" },
+                { "password", "password123" },
+                { "health_data", "sensitive" }
+            };
+
+            // Act & Assert
+            foreach (var key in metadata.Keys)
+            {
+                Assert.Throws<InvalidOperationException>(() => audit.AddMetadata(key, metadata[key]));
+            }
+        }
+
+        /// <summary>
+        /// Verifica que Session y SessionToken tienen configuradas las restricciones de claves y prefijos.
+        /// </summary>
+        [Fact]
+        public async Task Persistence_SessionAndToken_ShouldHaveRequiredMeta()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddIdentityPersistence("TestDb_Session_Meta_" + Guid.NewGuid().ToString("N"));
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<G1IdentityDbContext>();
+
+            // Act & Assert
+            var sessionEntity = context.Model.FindEntityType(typeof(Session));
+            Assert.NotNull(sessionEntity);
+            Assert.Equal(nameof(Session.SessionId), sessionEntity.FindPrimaryKey()?.Properties[0].Name);
+
+            var sessionTokenEntity = context.Model.FindEntityType(typeof(SessionToken));
+            Assert.NotNull(sessionTokenEntity);
+            
+            var auditEntity = context.Model.FindEntityType(typeof(AuditEvent));
+            Assert.NotNull(auditEntity);
+
+            var catalogEntity = context.Model.FindEntityType(typeof(CatalogSnapshot));
+            Assert.NotNull(catalogEntity);
+        }
+
         private sealed class TestLogger<T> : ILogger<T>
         {
             private readonly List<(LogLevel, string)> _logEntries;
