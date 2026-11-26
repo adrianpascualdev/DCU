@@ -43,6 +43,11 @@ namespace G1.Identity.Mock.Abstractions
         bool LinkRefreshToken(string sessionId, string tokenId);
 
         /// <summary>
+        /// Sustituye un refresh token activo por el siguiente sin permitir reutilizar ninguno de los dos.
+        /// </summary>
+        bool RotateRefreshToken(string sessionId, string previousTokenId, string nextTokenId);
+
+        /// <summary>
         /// Comprueba si un refresh token sigue activo dentro de su sesión.
         /// </summary>
         bool IsRefreshTokenActive(string sessionId, string tokenId);

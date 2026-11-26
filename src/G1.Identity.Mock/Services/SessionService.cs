@@ -132,6 +132,16 @@ namespace G1.Identity.Mock.Services
         }
 
         /// <inheritdoc />
+        public bool RotateRefreshToken(string sessionId, string previousTokenId, string nextTokenId)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(previousTokenId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(nextTokenId);
+            return _sessions.TryGetValue(sessionId, out var state)
+                && state.RotateRefreshToken(previousTokenId, nextTokenId, _timeProvider.GetUtcNow());
+        }
+
+        /// <inheritdoc />
         public bool IsRefreshTokenActive(string sessionId, string tokenId)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
@@ -144,6 +154,7 @@ namespace G1.Identity.Mock.Services
         {
             private readonly object _lock = new();
             private readonly HashSet<string> _activeRefreshTokens = new(StringComparer.Ordinal);
+            private readonly HashSet<string> _usedRefreshTokens = new(StringComparer.Ordinal);
             private DateTimeOffset _expiresAt;
             private DateTimeOffset _lastSeenAt;
             private DateTimeOffset? _revokedAt;
@@ -243,7 +254,28 @@ namespace G1.Identity.Mock.Services
                 lock (_lock)
                 {
                     ExpireIfNeeded(now);
-                    return _status == SessionStatus.Active && _activeRefreshTokens.Add(tokenId);
+                    return _status == SessionStatus.Active
+                        && _usedRefreshTokens.Add(tokenId)
+                        && _activeRefreshTokens.Add(tokenId);
+                }
+            }
+
+            internal bool RotateRefreshToken(string previousTokenId, string nextTokenId, DateTimeOffset now)
+            {
+                lock (_lock)
+                {
+                    ExpireIfNeeded(now);
+                    if (_status != SessionStatus.Active
+                        || string.Equals(previousTokenId, nextTokenId, StringComparison.Ordinal)
+                        || !_activeRefreshTokens.Contains(previousTokenId)
+                        || !_usedRefreshTokens.Add(nextTokenId))
+                    {
+                        return false;
+                    }
+
+                    _activeRefreshTokens.Remove(previousTokenId);
+                    _activeRefreshTokens.Add(nextTokenId);
+                    return true;
                 }
             }
 
