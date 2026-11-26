@@ -28,6 +28,22 @@ namespace G1.Identity.ContractTests
         }
 
         [Fact]
+        public void RefreshRotationInvalidatesPreviousTokenAndRejectsReplay()
+        {
+            var fixture = CreateFixture();
+            fixture.Service.Create(@"ses_1", @"usr_1", @"cli_1", new[] { @"mock_persona" }, @"Navegador");
+            Assert.True(fixture.Service.LinkRefreshToken(@"ses_1", @"rft_1"));
+
+            Assert.True(fixture.Service.RotateRefreshToken(@"ses_1", @"rft_1", @"rft_2"));
+            Assert.False(fixture.Service.IsRefreshTokenActive(@"ses_1", @"rft_1"));
+            Assert.True(fixture.Service.IsRefreshTokenActive(@"ses_1", @"rft_2"));
+            Assert.False(fixture.Service.RotateRefreshToken(@"ses_1", @"rft_1", @"rft_3"));
+            Assert.False(fixture.Service.LinkRefreshToken(@"ses_1", @"rft_1"));
+            Assert.False(fixture.Service.RotateRefreshToken(@"ses_1", @"rft_2", @"rft_1"));
+            Assert.True(fixture.Service.IsRefreshTokenActive(@"ses_1", @"rft_2"));
+        }
+
+        [Fact]
         public void ForeignSessionIsReportedAsNotFound()
         {
             var fixture = CreateFixture();
