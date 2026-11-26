@@ -15,12 +15,12 @@ Matriz de las 19 operaciones declaradas en `contracts/openapi.v1.yaml`. Una oper
 | `getCurrentIdentity` | DEV3 | Pendiente | Pendiente | Bloqueada por `/me` y fixtures |
 | `getUserSummary` | DEV3/DEV4 | Pendiente | Parcial en `AuthorizationTests` | Falta endpoint DEV3 |
 | `lookupUsers` | DEV3/DEV4 | Pendiente | Parcial en `AuthorizationTests` | Falta endpoint DEV3 |
-| `listSessions` | DEV4 | Parcial en `SessionTests` | Parcial | Falta validación HTTP contra esquema |
-| `revokeSession` | DEV4 | Parcial en `SessionTests` | Parcial: sesión ajena/no encontrada | Falta validación HTTP contra esquema |
-| `revokeAllSessions` | DEV4 | Parcial en `SessionTests` | Pendiente | Falta validación HTTP contra esquema |
-| `logoutCurrentSession` | DEV4 | Parcial en `SessionTests` | Pendiente | Falta validación HTTP contra esquema |
-| `listRoles` | DEV4 | `CatalogTests` | Parcial: autorización común | Falta validar el 401 contra esquema |
-| `listPermissions` | DEV4 | `CatalogTests` | Parcial: autorización común | Falta validar el 401 contra esquema |
+| `listSessions` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Prueba añadida; pendiente de CI e integración DEV2 |
+| `revokeSession` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 y 404 + esquema | Prueba añadida; pendiente de CI y revocación OpenIddict |
+| `revokeAllSessions` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 + esquema | Prueba añadida; pendiente de CI y revocación OpenIddict |
+| `logoutCurrentSession` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 + esquema | Prueba añadida; pendiente de CI y logout OIDC |
+| `listRoles` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Prueba añadida; pendiente de CI |
+| `listPermissions` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Prueba añadida; pendiente de CI |
 | `listMockPersonas` | DEV3 | Pendiente | Pendiente | Bloqueada por fixtures |
 | `resetMock` | DEV3 | Pendiente | Pendiente | Bloqueada por fixtures |
 
@@ -34,6 +34,10 @@ El contrato ya incluye `x-success-example` con cuerpo `null` para:
 - Las operaciones OIDC sin cuerpo que correspondan deben verificarse al integrar el trabajo de DEV2.
 
 ## Cobertura transversal disponible
+
+`ContractResponseAssertions` compara respuestas HTTP de sesiones y catálogos con los esquemas del OpenAPI normativo, incluidos éxito y error. La ejecución de estas pruebas aún debe confirmarse en CI; compilar localmente no cierra la validación.
+
+Pendiente de revisar con DEV1: `GET /sessions` devuelve 400 ante paginación inválida, pero el contrato no enumera esa respuesta. Los catálogos devuelven 304 con `If-None-Match`, también sin respuesta explícita en el contrato. No se cambia el OpenAPI desde DEV4.
 
 - `ErrorMappingTests`: esquema RFC 9457, códigos estables y separación de errores OAuth.
 - `AuthorizationTests`: denegación por defecto, permisos desconocidos, traducción 401/403 y protección frente a la omisión de antiforgery mediante una cabecera Bearer falsa.

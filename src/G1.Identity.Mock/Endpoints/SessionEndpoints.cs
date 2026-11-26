@@ -52,7 +52,7 @@ namespace G1.Identity.Mock.Endpoints
             int page = Constants.Sessions.DefaultPage,
             int pageSize = Constants.Sessions.DefaultPageSize)
         {
-            if (!TryGetIdentity(context, out var userId, out var currentSessionId))
+            if (!TryGetIdentity(context, sessionService, out var userId, out var currentSessionId))
             {
                 await ErrorMapping.WriteProblemAsync(context, Constants.ErrorCodes.SessionInvalid, context.RequestAborted);
                 return;
@@ -90,7 +90,7 @@ namespace G1.Identity.Mock.Endpoints
             ISessionService sessionService,
             IAuditService auditService)
         {
-            if (!TryGetIdentity(context, out var userId, out _))
+            if (!TryGetIdentity(context, sessionService, out var userId, out _))
             {
                 await ErrorMapping.WriteProblemAsync(context, Constants.ErrorCodes.SessionInvalid, context.RequestAborted);
                 return;
@@ -116,7 +116,7 @@ namespace G1.Identity.Mock.Endpoints
             ISessionService sessionService,
             IAuditService auditService)
         {
-            if (!TryGetIdentity(context, out var userId, out var currentSessionId))
+            if (!TryGetIdentity(context, sessionService, out var userId, out var currentSessionId))
             {
                 await ErrorMapping.WriteProblemAsync(context, Constants.ErrorCodes.SessionInvalid, context.RequestAborted);
                 return;
@@ -155,7 +155,7 @@ namespace G1.Identity.Mock.Endpoints
             ISessionService sessionService,
             IAuditService auditService)
         {
-            if (!TryGetIdentity(context, out var userId, out var currentSessionId))
+            if (!TryGetIdentity(context, sessionService, out var userId, out var currentSessionId))
             {
                 await ErrorMapping.WriteProblemAsync(context, Constants.ErrorCodes.SessionInvalid, context.RequestAborted);
                 return;
@@ -178,11 +178,23 @@ namespace G1.Identity.Mock.Endpoints
             context.Response.StatusCode = StatusCodes.Status204NoContent;
         }
 
-        private static bool TryGetIdentity(HttpContext context, out string userId, out string sessionId)
+        private static bool TryGetIdentity(
+            HttpContext context,
+            ISessionService sessionService,
+            out string userId,
+            out string sessionId)
         {
             userId = context.User.FindFirst(Constants.Claims.Subject)?.Value ?? string.Empty;
             sessionId = context.User.FindFirst(Constants.Claims.SessionId)?.Value ?? string.Empty;
-            return !string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(sessionId);
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(sessionId))
+            {
+                return false;
+            }
+
+            var claimedSessionId = sessionId;
+            return sessionService.ListActive(userId).Any(session =>
+                    string.Equals(session.SessionId, claimedSessionId, StringComparison.Ordinal))
+                && sessionService.Touch(claimedSessionId);
         }
 
         private static void RecordRevocation(

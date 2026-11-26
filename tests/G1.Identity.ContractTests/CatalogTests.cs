@@ -26,7 +26,7 @@ namespace G1.Identity.ContractTests
 
             using var response = await host.Client.GetAsync(Constants.Paths.RoleCatalog, cancellationToken);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(response, Constants.Paths.RoleCatalog, @"get", HttpStatusCode.OK, cancellationToken);
             var etag = Assert.Single(response.Headers.GetValues(Constants.Headers.ETag));
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
             Assert.Equal(Constants.Catalog.Version, document.RootElement.GetProperty(@"catalogVersion").GetString());
@@ -55,7 +55,7 @@ namespace G1.Identity.ContractTests
 
             using var response = await host.Client.GetAsync(Constants.Paths.PermissionCatalog, cancellationToken);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(response, Constants.Paths.PermissionCatalog, @"get", HttpStatusCode.OK, cancellationToken);
             Assert.Equal(Constants.Catalog.PermissionsEntityTag, Assert.Single(response.Headers.GetValues(Constants.Headers.ETag)));
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
             var permissions = document.RootElement.GetProperty(@"items").EnumerateArray().ToArray();
@@ -78,7 +78,7 @@ namespace G1.Identity.ContractTests
 
             using var response = await host.Client.GetAsync(path, cancellationToken);
 
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(response, path, @"get", HttpStatusCode.Unauthorized, cancellationToken);
             Assert.StartsWith(Constants.ContentTypes.ProblemJson, response.Content.Headers.ContentType?.MediaType);
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
             Assert.Equal(Constants.ErrorCodes.SessionRequired, document.RootElement.GetProperty(@"code").GetString());
