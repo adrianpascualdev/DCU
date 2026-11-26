@@ -109,7 +109,7 @@ description: "Task list for feature implementation — fase A, reparto G1 DEV1-D
 
 - [ ] T025 [P] [P1] [DEV2] [US2] Crear `tests/G1.Identity.ContractTests/PkceFlowTests.cs`: éxito con S256, rechazo de `plain`, código reutilizado, `code_verifier` incorrecto, `state`/`nonce` alterados y `redirect_uri` no registrada. **Rama**: `dev2/oauth-oidc`. **Entregable**: FR-030 verificado.
 - [ ] T026 [P] [P1] [DEV2] [US2] Crear `tests/G1.Identity.ContractTests/TokenValidationTests.cs`: firma con JWKS, `iss`, `aud=identity-api` en access token, `nonce` en ID token, `exp`, `jti`, `sid` y rotación de refresh con invalidación del anterior. **Rama**: `dev2/oauth-oidc`. **Entregable**: FR-034, FR-055 y SC-010 (TTL por separado).
-- [ ] T027 [P] [P1] [DEV2] [US2] Registrar el cliente `cli_mock_spa` en `src/G1.Identity.Mock/Fixtures/MockClients.cs` con `redirect_uri` exacta, scopes de D-004 y PKCE obligatorio. **Rama**: `dev2/oauth-oidc`. **Entregable**: cliente de desarrollo sin secreto en el repositorio.
+- [x] T027 [P] [P1] [DEV2] [US2] Registrar el cliente `cli_mock_spa` en `src/G1.Identity.Mock/Fixtures/MockClients.cs` con `redirect_uri` exacta, scopes de D-004 y PKCE obligatorio. **Rama**: `dev2/oauth-oidc`. **Entregable**: cliente de desarrollo sin secreto en el repositorio.
 - [ ] T067 [P] [P1] [DEV2] [US2] Crear `tests/G1.Identity.ContractTests/TokenAudienceTests.cs`: access token `aud=identity-api`, ID token `aud=client_id` y rechazo por una configuración de consumidor que no declara esa audiencia. **Rama**: `dev2/oauth-oidc`. **Entregable**: SC-011 y FR-053; D-016 sigue abierta.
 
 ### Implementation for User Story 2

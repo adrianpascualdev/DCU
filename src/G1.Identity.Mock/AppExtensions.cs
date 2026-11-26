@@ -1,3 +1,4 @@
+using G1.Identity.Mock.Fixtures;
 using G1.Identity.Mock.Middleware;
 using G1.Identity.Mock.Persistence;
 using G1.Identity.Mock.Settings;
@@ -15,15 +16,19 @@ namespace G1.Identity.Mock.Extensions
         /// la protección antiforgery y la limitación de peticiones.
         /// </summary>
         /// <param name="app">Instancia de la aplicación web.</param>
+        /// <param name="cancellationToken">Token de cancelación de la inicialización.</param>
         /// <returns>La aplicación configurada para encadenamiento fluido.</returns>
         /// <exception cref="ArgumentNullException">
         /// Se produce cuando <paramref name="app"/> es nulo.
         /// </exception>
-        public static WebApplication UseMiddlewares(this WebApplication app)
+        public static async Task<WebApplication> UseMiddlewaresAsync(
+            this WebApplication app,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(app);
 
             PersistenceExtensions.InitializePersistence(app.Services);
+            await MockClients.InitializeAsync(app.Services, cancellationToken);
             app.UseExceptionHandler();
             app.UseMiddleware<CorrelationIdMiddleware>();
             app.UseMiddleware<SecurityHeadersMiddleware>();

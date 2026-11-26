@@ -12,11 +12,11 @@ namespace G1.Identity.Mock
         /// Inicia el host ASP.NET Core del mock.
         /// </summary>
         /// <param name="args">Argumentos de línea de comandos.</param>
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
             var app = builder.Configure().Build();
-            app.UseMiddlewares().UseRegisterEndpointDefinitions();
+            (await app.UseMiddlewaresAsync()).UseRegisterEndpointDefinitions();
 
             try
             {

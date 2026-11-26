@@ -285,7 +285,7 @@ namespace G1.Identity.ContractTests
             configureServices?.Invoke(builder.Services);
 
             var app = builder.Build();
-            app.UseMiddlewares();
+            await app.UseMiddlewaresAsync(cancellationToken);
             mapEndpoints?.Invoke(app);
             await app.StartAsync(cancellationToken);
 

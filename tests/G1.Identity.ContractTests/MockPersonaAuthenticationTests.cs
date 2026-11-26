@@ -154,7 +154,7 @@ namespace G1.Identity.ContractTests
                 context.Request.Scheme = @"https";
                 await next();
             });
-            app.UseMiddlewares();
+            await app.UseMiddlewaresAsync(cancellationToken);
             app.UseAuthentication();
             app.UseAuthorization();
             

@@ -136,7 +136,7 @@ namespace G1.Identity.ContractTests
             builder.Configure();
 
             var app = builder.Build();
-            app.UseMiddlewares();
+            await app.UseMiddlewaresAsync(cancellationToken);
             app.UseRegisterEndpointDefinitions();
             await app.StartAsync(cancellationToken);
 
