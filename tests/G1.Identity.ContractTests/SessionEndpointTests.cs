@@ -30,21 +30,24 @@ namespace G1.Identity.ContractTests
             host.Sessions.Create(@"ses_foreign", @"usr_2", @"cli_1", [@"mock"], @"Ajeno");
 
             using var listed = await host.Client.GetAsync(Constants.Paths.Sessions, cancellationToken);
-            Assert.Equal(HttpStatusCode.OK, listed.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(listed, Constants.Paths.Sessions, @"get", HttpStatusCode.OK, cancellationToken);
             Assert.Equal(Constants.Headers.NoStore, Assert.Single(listed.Headers.GetValues(Constants.Headers.CacheControl)));
             using var document = JsonDocument.Parse(await listed.Content.ReadAsStringAsync(cancellationToken));
             Assert.Equal(2, document.RootElement.GetProperty(@"total").GetInt32());
             Assert.DoesNotContain(@"ses_foreign", document.RootElement.ToString(), StringComparison.Ordinal);
+            Assert.Contains(document.RootElement.GetProperty(@"items").EnumerateArray(),
+                item => item.GetProperty(@"sessionId").GetString() == @"ses_current"
+                    && item.GetProperty(@"current").GetBoolean());
 
             using var foreign = await DeleteAsync(host.Client, @"ses_foreign", cancellationToken);
-            Assert.Equal(HttpStatusCode.NotFound, foreign.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(foreign, Constants.Paths.SessionById, @"delete", HttpStatusCode.NotFound, cancellationToken);
             using var problem = JsonDocument.Parse(await foreign.Content.ReadAsStringAsync(cancellationToken));
             Assert.Equal(Constants.ErrorCodes.UserNotFound, problem.RootElement.GetProperty(@"code").GetString());
 
             using var revoked = await DeleteAsync(host.Client, @"ses_other", cancellationToken);
-            Assert.Equal(HttpStatusCode.NoContent, revoked.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(revoked, Constants.Paths.SessionById, @"delete", HttpStatusCode.NoContent, cancellationToken);
             using var repeated = await DeleteAsync(host.Client, @"ses_other", cancellationToken);
-            Assert.Equal(HttpStatusCode.NoContent, repeated.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(repeated, Constants.Paths.SessionById, @"delete", HttpStatusCode.NoContent, cancellationToken);
             Assert.Single(host.Sessions.ListActive(@"usr_1"));
         }
 
@@ -64,14 +67,14 @@ namespace G1.Identity.ContractTests
             };
             revokeAll.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(@"Bearer", @"fixture");
             using var response = await host.Client.SendAsync(revokeAll, cancellationToken);
-            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(response, Constants.Paths.RevokeAllSessions, @"post", HttpStatusCode.NoContent, cancellationToken);
             Assert.True(host.Sessions.IsRefreshTokenActive(@"ses_current", @"rft_current"));
             Assert.False(host.Sessions.IsRefreshTokenActive(@"ses_other", @"rft_other"));
 
             using var logout = new HttpRequestMessage(HttpMethod.Post, Constants.Paths.Logout);
             logout.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(@"Bearer", @"fixture");
             using var closed = await host.Client.SendAsync(logout, cancellationToken);
-            Assert.Equal(HttpStatusCode.NoContent, closed.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(closed, Constants.Paths.Logout, @"post", HttpStatusCode.NoContent, cancellationToken);
             Assert.False(host.Sessions.IsRefreshTokenActive(@"ses_current", @"rft_current"));
             Assert.Empty(host.Sessions.ListActive(@"usr_1"));
         }
@@ -90,8 +93,26 @@ namespace G1.Identity.ContractTests
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(@"Bearer", @"fixture");
             using var response = await host.Client.SendAsync(request, cancellationToken);
 
-            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            await ContractResponseAssertions.MatchesAsync(response, Constants.Paths.RevokeAllSessions, @"post", HttpStatusCode.NoContent, cancellationToken);
             Assert.Empty(host.Sessions.ListActive(@"usr_1"));
+        }
+
+        [Fact]
+        public async Task SessionOperationsRejectAnonymousRequestsWithContractProblem()
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            await using var host = await CreateHostAsync(cancellationToken, authenticated: false);
+            using var list = await host.Client.GetAsync(Constants.Paths.Sessions, cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(list, Constants.Paths.Sessions, @"get", HttpStatusCode.Unauthorized, cancellationToken);
+
+            using var delete = await DeleteAsync(host.Client, @"ses_missing", cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(delete, Constants.Paths.SessionById, @"delete", HttpStatusCode.Unauthorized, cancellationToken);
+
+            using var revokeAll = await host.Client.PostAsync(Constants.Paths.RevokeAllSessions, null, cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(revokeAll, Constants.Paths.RevokeAllSessions, @"post", HttpStatusCode.Unauthorized, cancellationToken);
+
+            using var logout = await host.Client.PostAsync(Constants.Paths.Logout, null, cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(logout, Constants.Paths.Logout, @"post", HttpStatusCode.Unauthorized, cancellationToken);
         }
 
         private static async Task<HttpResponseMessage> DeleteAsync(HttpClient client, string sessionId, CancellationToken token)
@@ -101,7 +122,7 @@ namespace G1.Identity.ContractTests
             return await client.SendAsync(request, token);
         }
 
-        private static async Task<TestHost> CreateHostAsync(CancellationToken token)
+        private static async Task<TestHost> CreateHostAsync(CancellationToken token, bool authenticated = true)
         {
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions
             {
@@ -131,9 +152,12 @@ namespace G1.Identity.ContractTests
             var app = builder.Build();
             app.Use(async (context, next) =>
             {
-                context.User = new ClaimsPrincipal(new ClaimsIdentity(
-                    [new Claim(Constants.Claims.Subject, @"usr_1"), new Claim(Constants.Claims.SessionId, @"ses_current")],
-                    @"test"));
+                if (authenticated)
+                {
+                    context.User = new ClaimsPrincipal(new ClaimsIdentity(
+                        [new Claim(Constants.Claims.Subject, @"usr_1"), new Claim(Constants.Claims.SessionId, @"ses_current")],
+                        @"test"));
+                }
                 await next(context);
             });
             app.UseAuthentication();
