@@ -33,6 +33,8 @@ namespace G1.Identity.Mock.Extensions
             app.UseMiddleware<CorrelationIdMiddleware>();
             app.UseMiddleware<SecurityHeadersMiddleware>();
             app.UseCors(Constants.Policies.Cors);
+            app.UseAuthentication();
+            app.UseAuthorization();
             app.UseAntiforgery();
             app.UseRateLimiter();
 
