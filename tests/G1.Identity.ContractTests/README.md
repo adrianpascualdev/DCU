@@ -37,6 +37,8 @@ El contrato ya incluye `x-success-example` con cuerpo `null` para:
 
 `ContractResponseAssertions` compara respuestas HTTP de sesiones y catálogos con los esquemas del OpenAPI normativo, incluidos éxito y error. La ejecución de estas pruebas aún debe confirmarse en CI; compilar localmente no cierra la validación.
 
+Pendiente de revisar con DEV1: `GET /sessions` devuelve 400 ante paginación inválida, pero el contrato no enumera esa respuesta. Los catálogos devuelven 304 con `If-None-Match`, también sin respuesta explícita en el contrato. No se cambia el OpenAPI desde DEV4.
+
 - `ErrorMappingTests`: esquema RFC 9457, códigos estables y separación de errores OAuth.
 - `AuthorizationTests`: denegación por defecto, permisos desconocidos, traducción 401/403 y protección frente a la omisión de antiforgery mediante una cabecera Bearer falsa.
 - `SecurityHeadersAndSecretScanTests`: detección de claves privadas y tokens reales.

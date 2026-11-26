@@ -115,6 +115,29 @@ namespace G1.Identity.ContractTests
             await ContractResponseAssertions.MatchesAsync(logout, Constants.Paths.Logout, @"post", HttpStatusCode.Unauthorized, cancellationToken);
         }
 
+        [Fact]
+        public async Task RevokedOrForeignCurrentSessionCannotAccessSessionOperations()
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            await using var host = await CreateHostAsync(cancellationToken);
+            host.Sessions.Create(@"ses_current", @"usr_2", @"cli_1", [@"mock"], @"Ajeno");
+
+            using var foreign = await host.Client.GetAsync(Constants.Paths.Sessions, cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(foreign, Constants.Paths.Sessions, @"get", HttpStatusCode.Unauthorized, cancellationToken);
+
+            using var stillForeign = await host.Client.PostAsync(Constants.Paths.Logout, null, cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(stillForeign, Constants.Paths.Logout, @"post", HttpStatusCode.Unauthorized, cancellationToken);
+
+            await using var revokedHost = await CreateHostAsync(cancellationToken);
+            revokedHost.Sessions.Create(@"ses_current", @"usr_1", @"cli_1", [@"mock"], @"Propio");
+            revokedHost.Sessions.Revoke(@"usr_1", @"ses_current", Constants.Sessions.UserRevokedReason);
+
+            using var revoked = await revokedHost.Client.GetAsync(Constants.Paths.Sessions, cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(revoked, Constants.Paths.Sessions, @"get", HttpStatusCode.Unauthorized, cancellationToken);
+            using var revokeAll = await revokedHost.Client.PostAsync(Constants.Paths.RevokeAllSessions, null, cancellationToken);
+            await ContractResponseAssertions.MatchesAsync(revokeAll, Constants.Paths.RevokeAllSessions, @"post", HttpStatusCode.Unauthorized, cancellationToken);
+        }
+
         private static async Task<HttpResponseMessage> DeleteAsync(HttpClient client, string sessionId, CancellationToken token)
         {
             using var request = new HttpRequestMessage(HttpMethod.Delete, $@"/api/v1/identity/sessions/{sessionId}");
