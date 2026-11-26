@@ -1,8 +1,11 @@
 using System.Threading.RateLimiting;
 using G1.Identity.Mock;
+using G1.Identity.Mock.Abstractions;
+using G1.Identity.Mock.Auth;
 using G1.Identity.Mock.Exceptions;
 using G1.Identity.Mock.OpenApi;
 using G1.Identity.Mock.Resources;
+using G1.Identity.Mock.Services;
 using G1.Identity.Mock.Settings;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
@@ -38,6 +41,13 @@ namespace Microsoft.Extensions.DependencyInjection
             builder.ConfigureIdentityOptions();
 
             /* Servicios de infraestructura */
+            builder.Services.AddAuthentication();
+            builder.Services.AddAuthorization(PermissionPolicies.Configure);
+            PermissionPolicies.RegisterResultHandler(builder.Services);
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddSingleton<ISessionService, SessionService>();
+            builder.Services.AddSingleton<IAuditService, AuditService>();
+
             builder.Services
                 .AddSingleton<ContractDocumentProvider>()
                 .AddSingleton<ContractDocumentTransformer>()

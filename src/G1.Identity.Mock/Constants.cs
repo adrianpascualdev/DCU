@@ -62,6 +62,7 @@ namespace G1.Identity.Mock
             internal const string NoSniff = @"nosniff";
             internal const string Deny = @"DENY";
             internal const string NoReferrer = @"no-referrer";
+            internal const string NoStore = @"no-store";
         }
 
         /// <summary>
@@ -83,6 +84,44 @@ namespace G1.Identity.Mock
             internal const string MockLogin = @"g1-mock-login";
             internal const string Registration = @"g1-registration";
             internal const string Summary = @"g1-summary";
+        }
+
+        /// <summary>
+        /// Permisos atómicos cuya evaluación pertenece a G1.
+        /// </summary>
+        internal static class Permissions
+        {
+            internal const string UserSummaryRead = @"identity.users.summary.read";
+            internal const string UserLookup = @"identity.users.lookup";
+            internal const string IdentityAdmin = @"identity.admin";
+        }
+
+        /// <summary>
+        /// Tipos de claim publicados por el proveedor de identidad.
+        /// </summary>
+        internal static class Claims
+        {
+            internal const string Permissions = @"permissions";
+            internal const string Roles = @"roles";
+            internal const string Subject = @"sub";
+            internal const string SessionId = @"sid";
+        }
+
+        /// <summary>
+        /// Códigos estables del catálogo común de roles.
+        /// </summary>
+        internal static class Roles
+        {
+            internal const string ClubAdmin = @"club_admin";
+            internal const string SportsManager = @"sports_manager";
+            internal const string Coach = @"coach";
+            internal const string Player = @"player";
+            internal const string Tutor = @"tutor";
+            internal const string Member = @"member";
+            internal const string Sponsor = @"sponsor";
+            internal const string Supporter = @"supporter";
+            internal const string KitStaff = @"kit_staff";
+            internal const string CommunicationsStaff = @"communications_staff";
         }
 
         /// <summary>
@@ -145,6 +184,45 @@ namespace G1.Identity.Mock
         {
             internal const string SwaggerPrefix = @"/swagger";
             internal const string OpenApiDocument = @"/openapi/v1.json";
+            internal const string RoleCatalog = @"/api/v1/identity/catalog/roles";
+            internal const string PermissionCatalog = @"/api/v1/identity/catalog/permissions";
+            internal const string Sessions = @"/api/v1/identity/sessions";
+            internal const string SessionById = @"/api/v1/identity/sessions/{sessionId}";
+            internal const string RevokeAllSessions = @"/api/v1/identity/sessions/revoke-all";
+            internal const string Logout = @"/api/v1/identity/logout";
+        }
+
+        /// <summary>
+        /// Valores estables del ciclo de vida de las sesiones.
+        /// </summary>
+        internal static class Sessions
+        {
+            internal const string LogoutReason = @"logout";
+            internal const string UserRevokedReason = @"user_revoked";
+            internal const int DefaultPage = 1;
+            internal const int DefaultPageSize = 20;
+            internal const int MaximumPageSize = 100;
+        }
+
+        /// <summary>
+        /// Nombres estables de eventos de auditoría.
+        /// </summary>
+        internal static class AuditEvents
+        {
+            internal const string Logout = @"logout";
+            internal const string SessionRevoked = @"session_revoked";
+            internal const string TokenRevoked = @"token_revoked";
+        }
+
+        /// <summary>
+        /// Valores estables de los catálogos públicos de identidad.
+        /// </summary>
+        internal static class Catalog
+        {
+            internal const string Version = @"1.0.0-provisional";
+            internal const string OwnerModule = @"G1";
+            internal const string RolesEntityTag = @"""roles-1.0.0-provisional""";
+            internal const string PermissionsEntityTag = @"""permissions-1.0.0-provisional""";
         }
 
         /// <summary>
@@ -153,6 +231,7 @@ namespace G1.Identity.Mock
         internal static class Antiforgery
         {
             internal const string CookieName = @"__Host-g1.antiforgery";
+            internal const string SessionCookieName = @"__Host-g1.session";
         }
     }
 }
