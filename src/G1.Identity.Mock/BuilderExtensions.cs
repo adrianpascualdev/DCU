@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using G1.Identity.Mock;
 using G1.Identity.Mock.Exceptions;
 using G1.Identity.Mock.OpenApi;
+using G1.Identity.Mock.Persistence;
 using G1.Identity.Mock.Resources;
 using G1.Identity.Mock.Settings;
 using Microsoft.AspNetCore.RateLimiting;
@@ -37,6 +38,11 @@ namespace Microsoft.Extensions.DependencyInjection
             /* Registro de settings/options */
             builder.ConfigureIdentityOptions();
 
+            var identityOptions = builder.Configuration
+                .GetSection(Constants.Configuration.Identity)
+                .Get<MockOptions>()
+                ?? throw new InvalidOperationException("La configuración Identity es obligatoria.");
+
             /* Servicios de infraestructura */
             builder.Services
                 .AddSingleton<ContractDocumentProvider>()
@@ -51,6 +57,10 @@ namespace Microsoft.Extensions.DependencyInjection
                 .ConfigureCors(builder.Configuration)
                 .ConfigureRateLimiter()
                 .ConfigureAntiforgery();
+
+            builder.Services
+                .AddIdentityPersistence()
+                .ConfigureOpenIddict(identityOptions);
 
             return builder;
         }

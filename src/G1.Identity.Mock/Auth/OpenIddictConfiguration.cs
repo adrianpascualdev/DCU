@@ -1,5 +1,6 @@
 using G1.Identity.Mock.Settings;
 using OpenIddict.Abstractions;
+using OpenIddict.Server;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -24,11 +25,8 @@ namespace Microsoft.Extensions.DependencyInjection
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(options);
 
-            var lifetimes = options.Lifetimes;
-
             services.AddOpenIddict()
                 .AddServer(server => server
-                    .SetIssuer(options.Issuer)
                     .SetAuthorizationEndpointUris("/connect/authorize")
                     .SetTokenEndpointUris("/connect/token")
                     .SetUserInfoEndpointUris("/connect/userinfo")
@@ -41,15 +39,20 @@ namespace Microsoft.Extensions.DependencyInjection
                         options.CodeChallengeMethods.Clear())
                     .Configure(options =>
                         options.CodeChallengeMethods.Add(OpenIddictConstants.CodeChallengeMethods.Sha256))
-                    .RegisterScopes(options.Scopes.ToArray())
-                    .SetAuthorizationCodeLifetime(lifetimes.AuthorizationCode)
-                    .SetAccessTokenLifetime(lifetimes.AccessToken)
-                    .SetIdentityTokenLifetime(lifetimes.IdentityToken)
-                    .SetRefreshTokenLifetime(lifetimes.RefreshToken)
                     .AddEphemeralEncryptionKey()
                     .AddEphemeralSigningKey()
                     .DisableAccessTokenEncryption()
                     .UseAspNetCore());
+
+            services.PostConfigure<OpenIddictServerOptions>(server =>
+            {
+                server.Issuer = options.Issuer;
+                server.Scopes.UnionWith(options.Scopes);
+                server.AuthorizationCodeLifetime = options.Lifetimes.AuthorizationCode;
+                server.AccessTokenLifetime = options.Lifetimes.AccessToken;
+                server.IdentityTokenLifetime = options.Lifetimes.IdentityToken;
+                server.RefreshTokenLifetime = options.Lifetimes.RefreshToken;
+            });
 
             return services;
         }

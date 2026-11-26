@@ -1,4 +1,5 @@
 using G1.Identity.Mock.Middleware;
+using G1.Identity.Mock.Persistence;
 using G1.Identity.Mock.Settings;
 using Microsoft.Extensions.Options;
 
@@ -22,6 +23,7 @@ namespace G1.Identity.Mock.Extensions
         {
             ArgumentNullException.ThrowIfNull(app);
 
+            PersistenceExtensions.InitializePersistence(app.Services);
             app.UseExceptionHandler();
             app.UseMiddleware<CorrelationIdMiddleware>();
             app.UseMiddleware<SecurityHeadersMiddleware>();
