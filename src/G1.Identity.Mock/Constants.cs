@@ -209,6 +209,14 @@ namespace G1.Identity.Mock
             internal const string AntiforgeryAttribute = @"data-antiforgery";
             internal const string FlowCookieName = @"__Host-g1.flow";
             internal const int MaximumIdentifierLength = 256;
+
+            /// <summary>
+            /// Compone el nombre de la cookie de vinculación de un flujo concreto.
+            /// </summary>
+            /// <param name="identifier">Identificador opaco de la solicitud.</param>
+            /// <returns>Un nombre compatible con el prefijo <c>__Host-</c>.</returns>
+            internal static string BuildFlowCookieName(string identifier) =>
+                string.Concat(FlowCookieName, @".", identifier);
             internal static readonly TimeSpan BindingLifetime = TimeSpan.FromMinutes(5);
             internal static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(5);
         }

@@ -68,7 +68,9 @@ namespace G1.Identity.ContractTests
 
             var flowCookie = GetCookieHeader(initiator.Response.Headers.SetCookie.ToString());
             var browser = CreateContextWithCookies(flowCookie);
-            var otherBrowser = CreateContextWithCookies($"{Constants.Selector.FlowCookieName}=tampered");
+            Assert.True(AuthorizationContextBinder.TryGetIdentifier(requestUri, out var flowIdentifier));
+            var otherBrowser = CreateContextWithCookies(
+                $"{Constants.Selector.BuildFlowCookieName(flowIdentifier)}=tampered");
 
             Assert.True(await binder.MatchesAsync(browser, requestUri, ClientId, cancellationToken));
             Assert.False(await binder.MatchesAsync(otherBrowser, requestUri, ClientId, cancellationToken));
@@ -91,6 +93,62 @@ namespace G1.Identity.ContractTests
                 expiringUri,
                 ClientId,
                 cancellationToken));
+        }
+
+        [Fact]
+        public async Task MultipleAuthorizationsFromSameBrowserRemainIndependent()
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var time = new MutableTimeProvider(DateTimeOffset.UtcNow);
+            await using var host = await SelectorHost.CreateAsync(@"Testing", time, cancellationToken);
+            var first = await TokenFixture.CreateAsync(host.App.Services, time, cancellationToken);
+            var applicationId = await first.Tokens.GetApplicationIdAsync(first.Token, cancellationToken);
+            var secondToken = await TokenFixture.CreateTokenAsync(first.Tokens, applicationId!, time, cancellationToken);
+            var secondTokenId = await first.Tokens.GetIdAsync(secondToken, cancellationToken);
+            var firstUri = RequestUriPrefix + first.TokenId;
+            var secondUri = RequestUriPrefix + secondTokenId;
+
+            var firstCookie = await host.BindAsync(firstUri, cancellationToken);
+            var secondCookie = await host.BindAsync(secondUri, cancellationToken);
+            var browserCookies = MergeCookies(firstCookie, new[] { secondCookie });
+
+            var antiforgeryTokens = new Dictionary<string, string>();
+            foreach (var uri in new[] { firstUri, secondUri })
+            {
+                using var get = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{Constants.Paths.Selector}?clientId={ClientId}&requestUri={Uri.EscapeDataString(uri)}");
+                get.Headers.Add(@"Cookie", browserCookies);
+                using var rendered = await host.Client.SendAsync(get, cancellationToken);
+
+                Assert.Equal(HttpStatusCode.OK, rendered.StatusCode);
+                var html = await rendered.Content.ReadAsStringAsync(cancellationToken);
+                var antiforgery = Regex.Match(html, $"{Constants.Selector.AntiforgeryAttribute}=\"([^\"]+)\"");
+                Assert.True(antiforgery.Success);
+                antiforgeryTokens[uri] = antiforgery.Groups[1].Value;
+                if (rendered.Headers.TryGetValues(@"Set-Cookie", out var newCookies))
+                {
+                    browserCookies = MergeCookies(browserCookies, newCookies);
+                }
+            }
+
+            foreach (var uri in new[] { firstUri, secondUri })
+            {
+                using var post = new HttpRequestMessage(HttpMethod.Post, Constants.Paths.Selector)
+                {
+                    Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                    {
+                        [@"requestUri"] = uri,
+                        [@"clientId"] = ClientId,
+                        [@"personaKey"] = @"persona-activa",
+                    }),
+                };
+                post.Headers.Add(@"Cookie", browserCookies);
+                post.Headers.Add(Constants.Headers.AntiforgeryToken, antiforgeryTokens[uri]);
+                using var selected = await host.Client.SendAsync(post, cancellationToken);
+
+                Assert.Equal(HttpStatusCode.SeeOther, selected.StatusCode);
+            }
         }
 
         [Fact]
@@ -498,20 +556,7 @@ namespace G1.Identity.ContractTests
                     cancellationToken);
                 var applicationId = await applications.GetIdAsync(application, cancellationToken);
 
-                var principal = new ClaimsPrincipal(new ClaimsIdentity(
-                    new[] { new Claim(OpenIddictConstants.Claims.Subject, @"usuario-prueba") },
-                    @"OpenIddict"));
-                var token = await tokens.CreateAsync(
-                    new OpenIddictTokenDescriptor
-                    {
-                        ApplicationId = applicationId,
-                        ExpirationDate = time.GetUtcNow().Add(Constants.Selector.TokenLifetime),
-                        Principal = principal,
-                        Status = OpenIddictConstants.Statuses.Valid,
-                        Subject = @"usuario-prueba",
-                        Type = OpenIddictConstants.TokenTypeIdentifiers.Private.RequestToken,
-                    },
-                    cancellationToken);
+                var token = await CreateTokenAsync(tokens, applicationId!, time, cancellationToken);
                 var tokenId = await tokens.GetIdAsync(token, cancellationToken);
 
                 var fixture = new TokenFixture(
@@ -522,6 +567,27 @@ namespace G1.Identity.ContractTests
                     token);
                 fixture._scope = scope;
                 return fixture;
+            }
+
+            internal static ValueTask<object> CreateTokenAsync(
+                IOpenIddictTokenManager tokens,
+                string applicationId,
+                TimeProvider time,
+                CancellationToken cancellationToken)
+            {
+                return tokens.CreateAsync(
+                    new OpenIddictTokenDescriptor
+                    {
+                        ApplicationId = applicationId,
+                        ExpirationDate = time.GetUtcNow().Add(Constants.Selector.TokenLifetime),
+                        Principal = new ClaimsPrincipal(new ClaimsIdentity(
+                            new[] { new Claim(OpenIddictConstants.Claims.Subject, @"usuario-prueba") },
+                            @"OpenIddict")),
+                        Status = OpenIddictConstants.Statuses.Valid,
+                        Subject = @"usuario-prueba",
+                        Type = OpenIddictConstants.TokenTypeIdentifiers.Private.RequestToken,
+                    },
+                    cancellationToken);
             }
 
             public async ValueTask DisposeAsync()

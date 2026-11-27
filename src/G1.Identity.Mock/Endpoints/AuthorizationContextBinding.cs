@@ -98,8 +98,10 @@ namespace G1.Identity.Mock.Endpoints
                 return Task.FromResult(false);
             }
 
+            // Una cookie por solicitud evita que un segundo flujo del mismo navegador
+            // sobrescriba el nonce del primero.
             context.Response.Cookies.Append(
-                Constants.Selector.FlowCookieName,
+                Constants.Selector.BuildFlowCookieName(identifier),
                 Convert.ToBase64String(nonce),
                 new CookieOptions
                 {
@@ -190,7 +192,7 @@ namespace G1.Identity.Mock.Endpoints
                 return false;
             }
 
-            var cookie = context.Request.Cookies[Constants.Selector.FlowCookieName];
+            var cookie = context.Request.Cookies[Constants.Selector.BuildFlowCookieName(identifier)];
             if (string.IsNullOrEmpty(cookie))
             {
                 return false;
