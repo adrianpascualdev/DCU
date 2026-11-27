@@ -27,7 +27,7 @@ namespace G1.Identity.Mock.Endpoints
             app.MapPost("/connect/token", TokenAsync)
                 .RequireRateLimiting(Constants.Policies.Token)
                 .WithTags("OIDC");
-            app.MapMethods("/connect/userinfo", [HttpMethods.Get, HttpMethods.Post], UserInfoAsync)
+            app.MapMethods("/connect/userinfo", [HttpMethods.Get, HttpMethods.Post], (Delegate)UserInfoAsync)
                 .WithTags("OIDC");
             app.MapPost("/connect/revoke", RevokeAsync)
                 .WithTags("OIDC");
@@ -77,14 +77,46 @@ namespace G1.Identity.Mock.Endpoints
             return TypedResults.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
-        private static IResult TokenAsync(HttpContext context)
+        private static async Task<IResult> TokenAsync(
+            HttpContext context,
+            ISessionService sessions,
+            CancellationToken cancellationToken)
         {
-            return TypedResults.Forbid(authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme]);
+            var authentication = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            if (!authentication.Succeeded || authentication.Principal is null)
+            {
+                return ForbidOpenIddict();
+            }
+
+            var sessionId = authentication.Principal.FindFirst(Constants.Claims.SessionId)?.Value;
+            if (string.IsNullOrWhiteSpace(sessionId) || !sessions.Touch(sessionId))
+            {
+                return ForbidOpenIddict();
+            }
+
+            return TypedResults.SignIn(
+                authentication.Principal,
+                authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
-        private static IResult UserInfoAsync()
+        private static async Task<IResult> UserInfoAsync(HttpContext context)
         {
-            return TypedResults.Forbid(authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme]);
+            var authentication = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            if (!authentication.Succeeded || authentication.Principal is null)
+            {
+                return ForbidOpenIddict();
+            }
+
+            var principal = authentication.Principal;
+            var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            CopyClaim(principal, identity, OpenIddictConstants.Claims.Subject);
+            CopyClaim(principal, identity, OpenIddictConstants.Claims.Name);
+            CopyClaim(principal, identity, OpenIddictConstants.Claims.Email);
+            CopyClaim(principal, identity, OpenIddictConstants.Claims.EmailVerified);
+
+            return TypedResults.SignIn(
+                new ClaimsPrincipal(identity),
+                authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
         private static IResult RevokeAsync()
@@ -95,6 +127,15 @@ namespace G1.Identity.Mock.Endpoints
         private static IResult ForbidOpenIddict()
         {
             return TypedResults.Forbid(authenticationSchemes: [OpenIddictServerAspNetCoreDefaults.AuthenticationScheme]);
+        }
+
+        private static void CopyClaim(ClaimsPrincipal source, ClaimsIdentity destination, string type)
+        {
+            var claim = source.FindFirst(type);
+            if (claim is not null)
+            {
+                destination.AddClaim(claim);
+            }
         }
     }
 }

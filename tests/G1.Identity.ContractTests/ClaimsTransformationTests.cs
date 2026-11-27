@@ -3,6 +3,7 @@ using G1.Identity.Mock.Auth;
 using G1.Identity.Mock.Persistence;
 using G1.Identity.Mock.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Abstractions;
 
 namespace G1.Identity.ContractTests
 {
@@ -107,6 +108,41 @@ namespace G1.Identity.ContractTests
                 cancellationToken);
 
             Assert.Null(principal);
+        }
+
+        /// <summary>
+        /// Mantiene los datos de contacto y autorización fuera del ID token cuando el contrato no los permite.
+        /// </summary>
+        [Fact]
+        public async Task CreateAsyncUsesContractualTokenDestinations()
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            await using var context = CreateContext();
+            context.MockPersonas.Add(new MockPersona
+            {
+                Key = "member.test",
+                UserId = "usr_member_test",
+                DisplayName = "Socio de prueba",
+                Email = "member.test@mock.g1.com",
+                EmailVerified = true,
+                PhoneVerified = true,
+                FixtureVersion = "test",
+            });
+            await context.SaveChangesAsync(cancellationToken);
+
+            var principal = await ClaimsTransformation.CreateAsync(
+                context,
+                "usr_member_test",
+                "ses_test",
+                ["mock_persona"],
+                cancellationToken);
+
+            Assert.NotNull(principal);
+            Assert.Equal(
+                ["access_token", "id_token"],
+                principal.FindFirst("email_verified")!.GetDestinations());
+            Assert.Equal(["access_token"], principal.FindFirst(Constants.Claims.SessionId)!.GetDestinations());
+            Assert.Equal(["access_token"], principal.FindFirst("phone_number_verified")!.GetDestinations());
         }
 
         private static G1IdentityDbContext CreateContext()
