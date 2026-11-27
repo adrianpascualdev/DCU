@@ -1,5 +1,8 @@
+using System.IO;
 using G1.Identity.Mock.Middleware;
 using G1.Identity.Mock.Settings;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 
 namespace G1.Identity.Mock.Extensions
@@ -26,6 +29,32 @@ namespace G1.Identity.Mock.Extensions
             app.UseMiddleware<CorrelationIdMiddleware>();
             app.UseMiddleware<SecurityHeadersMiddleware>();
             app.UseCors(Constants.Policies.Cors);
+
+            // T030: el build del selector solo se publica en Development/Testing y
+            // se sirve desde una ruta interna distinta de /api/v1/identity.
+            if (app.Environment.IsDevelopment()
+                || string.Equals(
+                    app.Environment.EnvironmentName,
+                    Constants.Environments.Testing,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var webRoot = app.Environment.WebRootPath
+                    ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+                var selectorRoot = Path.Combine(webRoot, "selector");
+
+                if (Directory.Exists(selectorRoot))
+                {
+                    app.UseStaticFiles(new StaticFileOptions
+                    {
+                        FileProvider = new PhysicalFileProvider(selectorRoot),
+                        RequestPath = new PathString(Constants.Paths.SelectorAssets),
+                        OnPrepareResponse = response =>
+                            response.Context.Response.Headers[Constants.Headers.CacheControl] =
+                                Constants.OpenApi.CacheControl,
+                    });
+                }
+            }
+
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseAntiforgery();

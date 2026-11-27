@@ -286,6 +286,9 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# T030: build del selector generado; se publica desde scripts/build-selector.sh
+src/G1.Identity.Mock/wwwroot/selector/
+
 # Visual Studio 6 build log
 *.plg
 

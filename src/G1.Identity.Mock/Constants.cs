@@ -144,6 +144,9 @@ namespace G1.Identity.Mock
         {
             internal const string SwaggerContentSecurityPolicy =
                 @"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+
+            internal const string SelectorContentSecurityPolicy =
+                @"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
         }
 
         /// <summary>
@@ -190,6 +193,32 @@ namespace G1.Identity.Mock
             internal const string SessionById = @"/api/v1/identity/sessions/{sessionId}";
             internal const string RevokeAllSessions = @"/api/v1/identity/sessions/revoke-all";
             internal const string Logout = @"/api/v1/identity/logout";
+            internal const string Authorize = @"/connect/authorize";
+            internal const string Selector = @"/identity/select-persona";
+            internal const string SelectorAssets = @"/identity-ui";
+        }
+
+        /// <summary>
+        /// Valores internos del selector alojado por el host (fuera de la API versionada).
+        /// </summary>
+        internal static class Selector
+        {
+            internal const string RequestUriPrefix = @"urn:ietf:params:oauth:request_uri:";
+            internal const string RequestUriAttribute = @"data-request-uri";
+            internal const string ClientIdAttribute = @"data-client-id";
+            internal const string AntiforgeryAttribute = @"data-antiforgery";
+            internal const string FlowCookieName = @"__Host-g1.flow";
+            internal const int MaximumIdentifierLength = 256;
+
+            /// <summary>
+            /// Compone el nombre de la cookie de vinculación de un flujo concreto.
+            /// </summary>
+            /// <param name="identifier">Identificador opaco de la solicitud.</param>
+            /// <returns>Un nombre compatible con el prefijo <c>__Host-</c>.</returns>
+            internal static string BuildFlowCookieName(string identifier) =>
+                string.Concat(FlowCookieName, @".", identifier);
+            internal static readonly TimeSpan BindingLifetime = TimeSpan.FromMinutes(5);
+            internal static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(5);
         }
 
         /// <summary>
