@@ -1,0 +1,44 @@
+:root {
+    --color-background: #f3f5f7;
+    --color-surface: #ffffff;
+    --color-text-primary: #1c2733;
+    --color-text-secondary: #465365;
+    --color-text-inverse: #ffffff;
+    --color-primary: #8a360a;
+    --color-primary-hover: #702805;
+    --color-secondary: #364658;
+    --color-secondary-hover: #283645;
+    --color-border: #667383;
+    --color-border-light: #d5dce2;
+    --color-focus: #1556a0;
+    --color-warning: #513400;
+    --color-warning-surface: #fff4d9;
+    --color-warning-border: #8a5b13;
+    --color-danger: #7f1d1d;
+    --color-danger-surface: #fff0ef;
+    --color-danger-border: #9e3434;
+    --font-family-base: "Open Sans", system-ui, sans-serif;
+    --font-size-md: 1rem;
+    --font-size-2xl: 1.625rem;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --line-height-base: 1.5;
+    --line-height-tight: 1.25;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --border-width: 1px;
+    --border-radius-md: 0.375rem;
+    --border-radius-lg: 0.75rem;
+    --focus-width: 3px;
+    --focus-offset: 3px;
+    --control-min-height: 2.75rem;
+    --shadow-md: 0 0.375rem 1.5rem #1c273317;
+
+    --bs-body-bg: var(--color-background);
+    --bs-body-color: var(--color-text-primary);
+    --bs-body-font-family: var(--font-family-base);
+    --bs-body-font-size: var(--font-size-md);
+    --bs-body-line-height: var(--line-height-base);
+}

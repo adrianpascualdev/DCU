@@ -121,6 +121,8 @@ ipch/
 
 # Visual Studio Trace Files
 *.e2e
+# En Windows el patrón también coincide con el proyecto Playwright.
+!/tests/G1.Identity.E2E/
 
 # TFS 2012 Local Workspace
 $tf/
