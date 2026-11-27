@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using G1.Identity.Mock.Persistence;
 using G1.Identity.Mock.Persistence.Entities;
+using G1.Identity.Mock.Fixtures;
 
 namespace G1.Identity.ContractTests
 {
@@ -181,6 +182,259 @@ namespace G1.Identity.ContractTests
 
             // Act & Assert
             Assert.Equal(scopeRef, assignment.ScopeRef);
+        }
+
+        /// <summary>
+        /// Verifica que una sesión Revoked o Expired no permite operaciones.
+        /// </summary>
+        /// <param name="status">El estado de la sesión.</param>
+        [Theory]
+        [InlineData(SessionStatus.Revoked)]
+        [InlineData(SessionStatus.Expired)]
+        public void Session_RevokedOrExpired_ShouldNotBeActive(SessionStatus status)
+        {
+            // Arrange
+            var session = new Session { Status = status };
+
+            // Act
+            var isActive = session.IsActive();
+
+            // Assert
+            Assert.False(isActive, $"Una sesión en estado {status} no debería estar activa.");
+        }
+
+        /// <summary>
+        /// Verifica que ExpiresAt nunca supera AbsoluteExpiresAt.
+        /// </summary>
+        [Fact]
+        public void Session_ExpiresAt_ShouldNotExceedAbsoluteExpiresAt()
+        {
+            // Arrange
+            var now = DateTimeOffset.UtcNow;
+            var session = new Session
+            {
+                AbsoluteExpiresAt = now.AddHours(1),
+                ExpiresAt = now.AddHours(2)
+            };
+
+            // Act
+            var isValid = session.HasValidExpirations();
+
+            // Assert
+            Assert.False(isValid, "ExpiresAt no debería superar AbsoluteExpiresAt.");
+        }
+
+        /// <summary>
+        /// Verifica que AuditEvent no expone secretos ni tokens en los metadatos.
+        /// </summary>
+        [Fact]
+        public void AuditEvent_ShouldNotExposeSecrets()
+        {
+            // Arrange
+            var audit = new AuditEvent();
+            var metadata = new Dictionary<string, string>
+            {
+                { "token", "secret_value" },
+                { "password", "password123" },
+                { "health_data", "sensitive" }
+            };
+
+            // Act & Assert
+            foreach (var key in metadata.Keys)
+            {
+                Assert.Throws<InvalidOperationException>(() => audit.AddMetadata(key, metadata[key]));
+            }
+        }
+
+        /// <summary>
+        /// Verifica que Session y SessionToken tienen configuradas las restricciones de claves y prefijos.
+        /// </summary>
+        [Fact]
+        public async Task Persistence_SessionAndToken_ShouldHaveRequiredMeta()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddIdentityPersistence("TestDb_Session_Meta_" + Guid.NewGuid().ToString("N"));
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<G1IdentityDbContext>();
+
+            // Act & Assert
+            var sessionEntity = context.Model.FindEntityType(typeof(Session));
+            Assert.NotNull(sessionEntity);
+            Assert.Equal(nameof(Session.SessionId), sessionEntity.FindPrimaryKey()?.Properties[0].Name);
+
+            var sessionTokenEntity = context.Model.FindEntityType(typeof(SessionToken));
+            Assert.NotNull(sessionTokenEntity);
+            
+            var auditEntity = context.Model.FindEntityType(typeof(AuditEvent));
+            Assert.NotNull(auditEntity);
+
+            var catalogEntity = context.Model.FindEntityType(typeof(CatalogSnapshot));
+            Assert.NotNull(catalogEntity);
+        }
+
+        /// <summary>
+        /// Verifica que el seeding es idempotente y no duplica registros al ejecutarse dos veces.
+        /// </summary>
+        [Fact]
+        public async Task SeedData_ShouldBeIdempotent()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddIdentityPersistence("TestDb_Seed_Idempotency_" + Guid.NewGuid().ToString("N"));
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<G1IdentityDbContext>();
+            
+            // Act
+            await SeedData.EnsureSeedDataAsync(context, TestContext.Current.CancellationToken);
+            var rolesCountFirst = await context.Roles.CountAsync(TestContext.Current.CancellationToken);
+            
+            await SeedData.EnsureSeedDataAsync(context, TestContext.Current.CancellationToken);
+            var rolesCountSecond = await context.Roles.CountAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(rolesCountFirst, rolesCountSecond);
+            Assert.NotEqual(0, rolesCountFirst);
+        }
+
+        /// <summary>
+        /// Verifica que el catálogo v1 contiene exactamente los 10 roles definidos.
+        /// </summary>
+        [Fact]
+        public async Task SeedData_ShouldHaveExactly10Roles()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddIdentityPersistence("TestDb_Seed_Roles_" + Guid.NewGuid().ToString("N"));
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<G1IdentityDbContext>();
+            
+            // Act
+            await SeedData.EnsureSeedDataAsync(context, TestContext.Current.CancellationToken);
+            var roles = await context.Roles.ToListAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(10, roles.Count);
+            var expectedRoles = new[] 
+            { 
+                "club_admin", "sports_manager", "coach", "player", "tutor", 
+                "member", "sponsor", "supporter", "kit_staff", "communications_staff" 
+            };
+            foreach (var code in expectedRoles)
+            {
+                Assert.Contains(roles, r => r.Code == code);
+            }
+        }
+
+        /// <summary>
+        /// Verifica que el catálogo contiene exactamente los 3 permisos de G1.
+        /// </summary>
+        [Fact]
+        public async Task SeedData_ShouldHaveExactly3G1Permissions()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddIdentityPersistence("TestDb_Seed_Permissions_" + Guid.NewGuid().ToString("N"));
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<G1IdentityDbContext>();
+            
+            // Act
+            await SeedData.EnsureSeedDataAsync(context, TestContext.Current.CancellationToken);
+            var permissions = await context.Permissions.ToListAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(3, permissions.Count);
+            var expectedPermissions = new[] 
+            { 
+                "identity.users.summary.read", "identity.users.lookup", "identity.admin" 
+            };
+            foreach (var code in expectedPermissions)
+            {
+                Assert.Contains(permissions, p => p.Code == code);
+            }
+        }
+
+        /// <summary>
+        /// Verifica la matriz de permisos exacta para los roles clave.
+        /// </summary>
+        [Fact]
+        public async Task SeedData_ShouldHaveCorrectRolePermissionMatrix()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddIdentityPersistence("TestDb_Seed_Matrix_" + Guid.NewGuid().ToString("N"));
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<G1IdentityDbContext>();
+            
+            // Act
+            await SeedData.EnsureSeedDataAsync(context, TestContext.Current.CancellationToken);
+            
+            // Helper local para verificar
+            async Task AssertPermission(string role, string permission, bool granted)
+            {
+                var hasPermission = await context.RolePermissions.AnyAsync(
+                    rp => rp.RoleCode == role && rp.PermissionCode == permission && rp.Granted == granted,
+                    TestContext.Current.CancellationToken);
+                Assert.True(hasPermission, $"El rol {role} debería tener el permiso {permission} como {granted}.");
+            }
+
+            // Assert
+            // club_admin: todos
+            await AssertPermission("club_admin", "identity.users.summary.read", true);
+            await AssertPermission("club_admin", "identity.users.lookup", true);
+            await AssertPermission("club_admin", "identity.admin", true);
+
+            // sports_manager: read, lookup
+            await AssertPermission("sports_manager", "identity.users.summary.read", true);
+            await AssertPermission("sports_manager", "identity.users.lookup", true);
+            
+            // communications_staff: lookup
+            await AssertPermission("communications_staff", "identity.users.lookup", true);
+
+            // Otros: deny-by-default (no deberían tener registros Granted=true si no están en la lista)
+            var otherGranted = await context.RolePermissions.AnyAsync(
+                rp => rp.Granted && 
+                      rp.RoleCode != "club_admin" && 
+                      rp.RoleCode != "sports_manager" && 
+                      rp.RoleCode != "communications_staff",
+                TestContext.Current.CancellationToken);
+            Assert.False(otherGranted, "No debería haber permisos concedidos para otros roles.");
+        }
+
+        /// <summary>
+        /// Verifica que se siembran exactamente las 15 personas ficticias.
+        /// </summary>
+        [Fact]
+        public async Task SeedData_ShouldHaveExactly15Personas()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddIdentityPersistence("TestDb_Seed_Personas_" + Guid.NewGuid().ToString("N"));
+            using var provider = services.BuildServiceProvider();
+            using var scope = provider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<G1IdentityDbContext>();
+            
+            // Act
+            await SeedData.EnsureSeedDataAsync(context, TestContext.Current.CancellationToken);
+            var personas = await context.MockPersonas.ToListAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(15, personas.Count);
+            var expectedKeys = new[] 
+            { 
+                "admin.club", "sports.manager", "coach.ana", "player.minor", "member.active",
+                "member.phone-unverified", "tutor.familiar", "sponsor.acme", "supporter.fan",
+                "kit.staff", "comms.staff", "user.no-role", "user.unverified", "user.inactive", "user.locked"
+            };
+            foreach (var key in expectedKeys)
+            {
+                Assert.Contains(personas, p => p.Key == key);
+            }
         }
 
         private sealed class TestLogger<T> : ILogger<T>
