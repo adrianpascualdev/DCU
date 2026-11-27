@@ -46,6 +46,26 @@ namespace G1.Identity.Mock.Persistence
         /// </summary>
         public DbSet<RoleAssignment> RoleAssignments { get; set; } = null!;
 
+        /// <summary>
+        /// Sesiones activas e históricas.
+        /// </summary>
+        public DbSet<Session> Sessions { get; set; } = null!;
+
+        /// <summary>
+        /// Vínculos entre tokens y sesiones.
+        /// </summary>
+        public DbSet<SessionToken> SessionTokens { get; set; } = null!;
+
+        /// <summary>
+        /// Eventos de auditoría de seguridad.
+        /// </summary>
+        public DbSet<AuditEvent> AuditEvents { get; set; } = null!;
+
+        /// <summary>
+        /// Instantáneas del catálogo versionado.
+        /// </summary>
+        public DbSet<CatalogSnapshot> CatalogSnapshots { get; set; } = null!;
+
         /// <inheritdoc />
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -101,6 +121,40 @@ namespace G1.Identity.Mock.Persistence
                 entity.Property(e => e.RoleCode).IsRequired();
                 entity.Property(e => e.GrantedBy).IsRequired();
                 entity.Property(e => e.Reason).IsRequired();
+            });
+
+            // Configuración de Session
+            modelBuilder.Entity<Session>(entity =>
+            {
+                entity.HasKey(e => e.SessionId);
+                entity.Property(e => e.SessionId).IsRequired();
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.ClientId).IsRequired();
+                entity.Property(e => e.DeviceLabel).IsRequired();
+            });
+
+            // Configuración de SessionToken
+            modelBuilder.Entity<SessionToken>(entity =>
+            {
+                entity.HasKey(e => e.TokenId);
+                entity.Property(e => e.TokenId).IsRequired();
+                entity.Property(e => e.SessionId).IsRequired();
+            });
+
+            // Configuración de AuditEvent
+            modelBuilder.Entity<AuditEvent>(entity =>
+            {
+                entity.HasKey(e => e.EventId);
+                entity.Property(e => e.EventId).IsRequired();
+                entity.Property(e => e.CorrelationId).IsRequired();
+                entity.Ignore(e => e.Metadata);
+            });
+
+            // Configuración de CatalogSnapshot
+            modelBuilder.Entity<CatalogSnapshot>(entity =>
+            {
+                entity.HasKey(e => e.CatalogVersion);
+                entity.Property(e => e.CatalogVersion).IsRequired();
             });
         }
     }
