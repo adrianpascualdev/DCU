@@ -40,9 +40,12 @@ namespace Microsoft.Extensions.DependencyInjection
                     .Configure(options =>
                         options.CodeChallengeMethods.Add(OpenIddictConstants.CodeChallengeMethods.Sha256))
                     .AddEphemeralEncryptionKey()
-                    .AddEphemeralSigningKey()
-                    .DisableAccessTokenEncryption()
-                    .UseAspNetCore());
+                     .AddEphemeralSigningKey()
+                     .DisableAccessTokenEncryption()
+                    .UseAspNetCore()
+                    .EnableAuthorizationEndpointPassthrough()
+                    .EnableTokenEndpointPassthrough()
+                    .EnableUserInfoEndpointPassthrough());
 
             services.PostConfigure<OpenIddictServerOptions>(server =>
             {
