@@ -1,0 +1,97 @@
+.page {
+    padding-block: var(--spacing-xl);
+}
+
+.panel {
+    --bs-card-bg: var(--color-surface);
+    --bs-card-border-color: var(--color-border-light);
+    --bs-card-border-radius: var(--border-radius-lg);
+
+    box-shadow: var(--shadow-md);
+}
+
+.content {
+    padding: var(--spacing-lg);
+}
+
+.content h1 {
+    margin-block-end: var(--spacing-md);
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+}
+
+.notice {
+    --bs-alert-color: var(--color-warning);
+    --bs-alert-bg: var(--color-warning-surface);
+    --bs-alert-border-color: var(--color-warning-border);
+}
+
+.error {
+    --bs-alert-color: var(--color-danger);
+    --bs-alert-bg: var(--color-danger-surface);
+    --bs-alert-border-color: var(--color-danger-border);
+}
+
+.form {
+    display: grid;
+    justify-items: start;
+    gap: var(--spacing-sm);
+}
+
+.form > div:first-child {
+    inline-size: 100%;
+    min-inline-size: 0;
+}
+
+.label {
+    font-weight: var(--font-weight-semibold);
+}
+
+.help {
+    color: var(--color-text-secondary);
+    margin-block-end: var(--spacing-sm);
+}
+
+.select {
+    appearance: auto;
+    min-block-size: var(--control-min-height);
+    padding: var(--spacing-sm);
+    color: var(--color-text-primary);
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--border-radius-md);
+}
+
+.primaryButton {
+    --bs-btn-bg: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: var(--color-primary-hover);
+    --bs-btn-hover-border-color: var(--color-primary-hover);
+    --bs-btn-active-bg: var(--color-primary-hover);
+    --bs-btn-active-border-color: var(--color-primary-hover);
+}
+
+.secondaryButton {
+    --bs-btn-bg: var(--color-secondary);
+    --bs-btn-border-color: var(--color-secondary);
+    --bs-btn-hover-bg: var(--color-secondary-hover);
+    --bs-btn-hover-border-color: var(--color-secondary-hover);
+    --bs-btn-active-bg: var(--color-secondary-hover);
+    --bs-btn-active-border-color: var(--color-secondary-hover);
+}
+
+.primaryButton,
+.secondaryButton {
+    --bs-btn-color: var(--color-text-inverse);
+    --bs-btn-hover-color: var(--color-text-inverse);
+    --bs-btn-active-color: var(--color-text-inverse);
+
+    min-block-size: var(--control-min-height);
+}
+
+.content :focus-visible {
+    outline: var(--focus-width) solid var(--color-focus, Highlight);
+    outline-offset: var(--focus-offset);
+    box-shadow: none;
+}
