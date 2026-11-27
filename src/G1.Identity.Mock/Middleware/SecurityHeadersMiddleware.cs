@@ -38,6 +38,16 @@ namespace G1.Identity.Mock.Middleware
                 headers[Constants.Headers.ContentSecurityPolicy] =
                     Constants.SecurityHeaders.SwaggerContentSecurityPolicy;
             }
+            else if (context.Request.Path.StartsWithSegments(
+                         new PathString(Constants.Paths.Selector),
+                         StringComparison.OrdinalIgnoreCase)
+                     || context.Request.Path.StartsWithSegments(
+                         new PathString(Constants.Paths.SelectorAssets),
+                         StringComparison.OrdinalIgnoreCase))
+            {
+                headers[Constants.Headers.ContentSecurityPolicy] =
+                    Constants.SecurityHeaders.SelectorContentSecurityPolicy;
+            }
 
             return _next(context);
         }

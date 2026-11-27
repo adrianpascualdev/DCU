@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using G1.Identity.Mock;
 using G1.Identity.Mock.Abstractions;
 using G1.Identity.Mock.Auth;
+using G1.Identity.Mock.Endpoints;
 using G1.Identity.Mock.Exceptions;
 using G1.Identity.Mock.OpenApi;
 using G1.Identity.Mock.Resources;
@@ -41,12 +42,20 @@ namespace Microsoft.Extensions.DependencyInjection
             builder.ConfigureIdentityOptions();
 
             /* Servicios de infraestructura */
+            // Nota para DEV2/DEV3: el esquema de cookies (CookieAuthenticationDefaults.AuthenticationScheme)
+            // debe registrarlo quien publique la autenticación real. DEV1 no lo añade aquí para no
+            // duplicar AddCookie()/AddMockPersona() ni alterar la autenticación existente.
             builder.Services.AddAuthentication();
             builder.Services.AddAuthorization(PermissionPolicies.Configure);
             PermissionPolicies.RegisterResultHandler(builder.Services);
             builder.Services.AddSingleton(TimeProvider.System);
             builder.Services.AddSingleton<ISessionService, SessionService>();
             builder.Services.AddSingleton<IAuditService, AuditService>();
+            builder.Services
+                .AddSingleton<AuthorizationContextBinder>()
+                .AddSingleton<IAuthorizationContextBinder>(provider =>
+                    provider.GetRequiredService<AuthorizationContextBinder>())
+                .AddScoped<IAuthorizationContextValidator, AuthorizationContextValidator>();
 
             builder.Services
                 .AddSingleton<ContractDocumentProvider>()

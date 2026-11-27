@@ -38,4 +38,20 @@
     <InternalsVisibleTo Include="G1.Identity.ContractTests" />
   </ItemGroup>
 
+  <!-- T030: publicar el build ya generado; Node solo se usa en scripts/build-selector.sh / CI. -->
+  <Target Name="PublishSelectorBuild" BeforeTargets="Build" Condition="'$(SkipSelectorBuild)' != 'true'">
+    <PropertyGroup>
+      <SelectorSourceDirectory>$(MSBuildProjectDirectory)/../G1.Identity.Mock.Ui/dist</SelectorSourceDirectory>
+      <SelectorTargetDirectory>$(MSBuildProjectDirectory)/wwwroot/selector</SelectorTargetDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <SelectorBuildFile Include="$(SelectorSourceDirectory)/**/*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(SelectorBuildFile)"
+      DestinationFiles="@(SelectorBuildFile->'$(SelectorTargetDirectory)/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+      Condition="'@(SelectorBuildFile)' != ''" />
+  </Target>
+
 </Project>
