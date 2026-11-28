@@ -15,14 +15,14 @@ Matriz de las 19 operaciones declaradas en `contracts/openapi.v1.yaml`. Una oper
 | `getCurrentIdentity` | DEV3 | Pendiente | Pendiente | Bloqueada por `/me` y fixtures |
 | `getUserSummary` | DEV3/DEV4 | Pendiente | Parcial en `AuthorizationTests` | Falta endpoint DEV3 |
 | `lookupUsers` | DEV3/DEV4 | Pendiente | Parcial en `AuthorizationTests` | Falta endpoint DEV3 |
-| `listSessions` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Prueba añadida; pendiente de CI e integración DEV2 |
-| `revokeSession` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 y 404 + esquema | Prueba añadida; pendiente de CI y revocación OpenIddict |
-| `revokeAllSessions` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 + esquema | Prueba añadida; pendiente de CI y revocación OpenIddict |
-| `logoutCurrentSession` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 + esquema | Prueba añadida; pendiente de CI y logout OIDC |
-| `listRoles` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Prueba añadida; pendiente de CI |
-| `listPermissions` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Prueba añadida; pendiente de CI |
-| `listMockPersonas` | DEV3 | Pendiente | Pendiente | Bloqueada por fixtures |
-| `resetMock` | DEV3 | Pendiente | Pendiente | Bloqueada por fixtures |
+| `listSessions` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Validada en CI de PR #9; integración OIDC pendiente |
+| `revokeSession` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 y 404 + esquema | Validada en CI de PR #9; revocación OpenIddict pendiente |
+| `revokeAllSessions` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 + esquema | Validada en CI de PR #9; revocación OpenIddict pendiente |
+| `logoutCurrentSession` | DEV4 | HTTP 204 sin cuerpo | HTTP 401 + esquema | Validada en CI de PR #9; logout OIDC pendiente |
+| `listRoles` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Validada en CI de PR #9 |
+| `listPermissions` | DEV4 | HTTP 200 + esquema | HTTP 401 + esquema | Validada en CI de PR #9 |
+| `listMockPersonas` | DEV3 | HTTP 200 + esquema | HTTP 404 + esquema | Pruebas de DEV3 integradas; CI de rama de integración por comprobar |
+| `resetMock` | DEV3 | HTTP 204 sin cuerpo | HTTP 404 + esquema | Pruebas de DEV3 integradas; CI de rama de integración por comprobar |
 
 ## Respuestas sin cuerpo
 
@@ -35,13 +35,13 @@ El contrato ya incluye `x-success-example` con cuerpo `null` para:
 
 ## Cobertura transversal disponible
 
-`ContractResponseAssertions` compara respuestas HTTP de sesiones y catálogos con los esquemas del OpenAPI normativo, incluidos éxito y error. La ejecución de estas pruebas aún debe confirmarse en CI; compilar localmente no cierra la validación.
+`ContractResponseAssertions` compara respuestas HTTP de sesiones y catálogos con los esquemas del OpenAPI normativo, incluidos éxito y error. La PR #9 pasó ambas comprobaciones de GitHub; los cambios posteriores de DEV4 todavía necesitan CI tras publicarse.
 
 Pendiente de revisar con DEV1: `GET /sessions` devuelve 400 ante paginación inválida, pero el contrato no enumera esa respuesta. Los catálogos devuelven 304 con `If-None-Match`, también sin respuesta explícita en el contrato. No se cambia el OpenAPI desde DEV4.
 
 - `ErrorMappingTests`: esquema RFC 9457, códigos estables y separación de errores OAuth.
-- `AuthorizationTests`: denegación por defecto, permisos desconocidos, traducción 401/403 y protección frente a la omisión de antiforgery mediante una cabecera Bearer falsa.
+- `AuthorizationTests`: denegación por defecto, permisos desconocidos, distinción entre sesión ausente e inválida, auditoría de 403 y protección frente a la omisión de antiforgery mediante una cabecera Bearer falsa.
 - `SecurityHeadersAndSecretScanTests`: detección de claves privadas y tokens reales.
 - `PipelineIntegrationTests`: correlación, cabeceras, CSP, CORS, antiforgery y `Retry-After`.
 - `SwaggerAvailabilityTests`: publicación del contrato y validación condicional por `ETag`.
-- `AuditTests`: auditoría minimizada sin tokens ni datos personales.
+- `AuditTests` y `SessionEndpointTests`: auditoría minimizada y eventos HTTP de revocación y logout, sin duplicar la auditoría al repetir una revocación.
