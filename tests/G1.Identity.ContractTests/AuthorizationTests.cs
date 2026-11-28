@@ -8,6 +8,7 @@ using G1.Identity.Mock.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
+using OpenIddict.Abstractions;
 
 namespace G1.Identity.ContractTests
 {
@@ -68,6 +69,17 @@ namespace G1.Identity.ContractTests
 
             Assert.True(PermissionPolicies.IsGranted(principal, Constants.Permissions.UserLookup));
             Assert.False(PermissionPolicies.IsGranted(principal, @"unknown.permission"));
+        }
+
+        [Fact]
+        public void RoleClaimEmittedByOpenIddictUsesTheSamePermissionMatrix()
+        {
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(OpenIddictConstants.Claims.Role, Constants.Roles.SportsManager)], @"test"));
+
+            Assert.True(PermissionPolicies.IsGranted(principal, Constants.Permissions.UserLookup));
+            Assert.True(PermissionPolicies.IsGranted(principal, Constants.Permissions.UserSummaryRead));
+            Assert.False(PermissionPolicies.IsGranted(principal, Constants.Permissions.IdentityAdmin));
         }
 
         [Fact]

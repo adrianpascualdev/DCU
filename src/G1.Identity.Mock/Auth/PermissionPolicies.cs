@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Routing;
+using OpenIddict.Abstractions;
 
 namespace G1.Identity.Mock.Auth
 {
@@ -66,7 +67,9 @@ namespace G1.Identity.Mock.Auth
                 return true;
             }
 
-            var roles = principal.FindAll(Constants.Claims.Roles).SelectMany(GetClaimValues);
+            var roles = principal.FindAll(Constants.Claims.Roles)
+                .Concat(principal.FindAll(OpenIddictConstants.Claims.Role))
+                .SelectMany(GetClaimValues);
             return ResolvePermissions(roles).Contains(requiredPermission, StringComparer.Ordinal);
         }
 
