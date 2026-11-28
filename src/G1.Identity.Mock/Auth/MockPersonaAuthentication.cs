@@ -1,7 +1,10 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using G1.Identity.Mock.Persistence;
+using G1.Identity.Mock.Persistence.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -13,14 +16,14 @@ namespace G1.Identity.Mock.Auth
     public sealed class MockPersonaAuthenticationOptions : AuthenticationSchemeOptions
     {
         /// <summary>
-        /// Nombre del parámetro de consulta para forzar la identidad.
+        /// Nombre del parámetro de consulta para seleccionar la persona del mock en desarrollo o pruebas.
         /// </summary>
         public string ParameterName { get; set; } = @"mock_persona";
 
         /// <summary>
-        /// Nombre de la cookie de sesión.
+        /// Nombre de la cookie de sesión emitida tras autenticar a la persona.
         /// </summary>
-        public string CookieName { get; set; } = @"__Host-g1.session";
+        public string CookieName { get; set; } = Constants.Antiforgery.SessionCookieName;
     }
 
     /// <summary>
@@ -28,11 +31,13 @@ namespace G1.Identity.Mock.Auth
     /// </summary>
     public static class MockPersonaAuthenticationExtensions
     {
+        private const string SchemeName = @"MockPersona";
+
         /// <summary>
-        /// Añade la autenticación de personas del mock al pipeline.
+        /// Añade la autenticación de personas del mock al pipeline de autenticación.
         /// </summary>
         /// <param name="builder">Constructor de autenticación.</param>
-        /// <returns>El constructor configurado.</returns>
+        /// <returns>El constructor de autenticación configurado.</returns>
         /// <exception cref="ArgumentNullException">
         /// Se produce cuando <paramref name="builder"/> es nulo.
         /// </exception>
@@ -43,7 +48,7 @@ namespace G1.Identity.Mock.Auth
             builder.Services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
                 .Configure(options =>
                 {
-                    options.Cookie.Name = @"__Host-g1.session";
+                    options.Cookie.Name = Constants.Antiforgery.SessionCookieName;
                     options.Cookie.HttpOnly = true;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.Cookie.SameSite = SameSiteMode.Lax;
@@ -52,76 +57,192 @@ namespace G1.Identity.Mock.Auth
                 });
 
             return builder.AddScheme<MockPersonaAuthenticationOptions, MockPersonaAuthenticationHandler>(
-                @"MockPersona",
+                SchemeName,
                 _ => { });
         }
     }
 
     /// <summary>
-    /// Manejador de autenticación que permite simular un usuario mediante un parámetro de consulta.
+    /// Manejador de autenticación que resuelve personas del mock en persistencia
+    /// y aplica validaciones de estado, permisos limitados y minimización de menores.
     /// </summary>
     internal sealed class MockPersonaAuthenticationHandler : AuthenticationHandler<MockPersonaAuthenticationOptions>
     {
+        private const string NameClaimType = @"name";
+        private const string EmailClaimType = @"email";
+        private const string EmailVerifiedClaimType = @"email_verified";
+        private const string PhoneVerifiedClaimType = @"phone_verified";
+        private const string IsMinorClaimType = @"is_minor";
+        private const string MockClaimType = @"mock";
+        private const string TrueClaimValue = @"true";
+        private const string FalseClaimValue = @"false";
+        private const string GenericAuthenticationFailureMessage = @"No se pudo autenticar la persona solicitada.";
+
         private readonly IWebHostEnvironment _environment;
+        private readonly G1IdentityDbContext _dbContext;
 
         /// <summary>
         /// Inicializa una nueva instancia de <see cref="MockPersonaAuthenticationHandler"/>.
         /// </summary>
-        /// <param name="options">Opciones del esquema.</param>
-        /// <param name="logger">Factoría de logs.</param>
+        /// <param name="options">Opciones del esquema de autenticación.</param>
+        /// <param name="logger">Factoría de registros.</param>
         /// <param name="encoder">Codificador de URL.</param>
-        /// <param name="environment">Entorno de ejecución.</param>
+        /// <param name="environment">Entorno de ejecución del host.</param>
+        /// <param name="dbContext">Contexto de persistencia del mock de identidad.</param>
+        /// <exception cref="ArgumentNullException">
+        /// Se produce cuando <paramref name="environment"/> o <paramref name="dbContext"/> es nulo.
+        /// </exception>
         public MockPersonaAuthenticationHandler(
             IOptionsMonitor<MockPersonaAuthenticationOptions> options,
             ILoggerFactory logger,
             UrlEncoder encoder,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            G1IdentityDbContext dbContext)
             : base(options, logger, encoder)
         {
+            ArgumentNullException.ThrowIfNull(environment);
+            ArgumentNullException.ThrowIfNull(dbContext);
+
             _environment = environment;
+            _dbContext = dbContext;
         }
 
         /// <inheritdoc />
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            // 1. Intentar autenticar por cookie primero (esquema por defecto)
             var cookieResult = await Context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             if (cookieResult.Succeeded)
             {
                 return cookieResult;
             }
 
-            // 2. Si no hay cookie, buscar el parámetro mock_persona si no estamos en producción
-            if (!_environment.IsDevelopment() && !_environment.IsEnvironment(@"Testing"))
+            if (!_environment.IsDevelopment() && !_environment.IsEnvironment(Constants.Environments.Testing))
             {
                 return AuthenticateResult.NoResult();
             }
 
-            if (!Context.Request.Query.TryGetValue(Options.ParameterName, out var personaId) || string.IsNullOrWhiteSpace(personaId))
+            if (!Context.Request.Query.TryGetValue(Options.ParameterName, out var personaValues))
             {
                 return AuthenticateResult.NoResult();
             }
 
-            // 3. Crear identidad simulada
-            // Nota: En T031 se añadirán más claims. Por ahora lo mínimo para identificar al usuario.
-            var claims = new List<Claim>
+            var requestedIdentifier = personaValues.ToString().Trim();
+            if (String.IsNullOrWhiteSpace(requestedIdentifier))
             {
-                new(ClaimTypes.NameIdentifier, personaId.ToString()),
-                new(@"sub", personaId.ToString()),
-                new(@"mock", @"true")
-            };
+                return AuthenticateResult.NoResult();
+            }
+
+            var cancellationToken = Context.RequestAborted;
+            var persona = await _dbContext.MockPersonas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    candidate => candidate.Key == requestedIdentifier || candidate.UserId == requestedIdentifier,
+                    cancellationToken);
+
+            if (persona is null || !persona.CanAuthorize())
+            {
+                Logger.LogWarning("Autenticación del mock rechazada con error genérico para el parámetro recibido.");
+                var failureResult = AuthenticateResult.Fail(GenericAuthenticationFailureMessage);
+                Context.Features.Set<IAuthenticateResultFeature>(new MockAuthenticateResultFeature(failureResult));
+                return failureResult;
+            }
+
+            var activeRoles = await GetActiveRolesAsync(persona.UserId, cancellationToken);
+            var effectivePermissions = await GetEffectivePermissionsAsync(persona, activeRoles, cancellationToken);
+            var claims = BuildClaims(persona, activeRoles, effectivePermissions);
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
-            // 4. Emitir cookie de sesión automáticamente
             await Context.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 principal,
-                new AuthenticationProperties { IsPersistent = true });
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                });
 
             return AuthenticateResult.Success(ticket);
+        }
+
+        private async Task<List<string>> GetActiveRolesAsync(string userId, CancellationToken cancellationToken)
+        {
+            return await _dbContext.RoleAssignments
+                .AsNoTracking()
+                .Where(assignment => assignment.UserId == userId && assignment.RevokedAt == null)
+                .Select(assignment => assignment.RoleCode)
+                .Distinct()
+                .OrderBy(roleCode => roleCode)
+                .ToListAsync(cancellationToken);
+        }
+
+        private async Task<List<string>> GetEffectivePermissionsAsync(
+            MockPersona persona,
+            IReadOnlyCollection<string> activeRoles,
+            CancellationToken cancellationToken)
+        {
+            if (!persona.EmailVerified || activeRoles.Count == 0)
+            {
+                return new List<string>();
+            }
+
+            return await _dbContext.RolePermissions
+                .AsNoTracking()
+                .Where(rolePermission => rolePermission.Granted && activeRoles.Contains(rolePermission.RoleCode))
+                .Select(rolePermission => rolePermission.PermissionCode)
+                .Distinct()
+                .OrderBy(permissionCode => permissionCode)
+                .ToListAsync(cancellationToken);
+        }
+
+        private static List<Claim> BuildClaims(
+            MockPersona persona,
+            IReadOnlyCollection<string> roles,
+            IReadOnlyCollection<string> permissions)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, persona.UserId),
+                new Claim(Constants.Claims.Subject, persona.UserId),
+                new Claim(NameClaimType, persona.DisplayName),
+                new Claim(EmailVerifiedClaimType, FormatBooleanClaim(persona.EmailVerified)),
+                new Claim(PhoneVerifiedClaimType, FormatBooleanClaim(persona.PhoneVerified)),
+                new Claim(IsMinorClaimType, FormatBooleanClaim(persona.IsMinor)),
+                new Claim(MockClaimType, TrueClaimValue),
+            };
+
+            if (!persona.IsMinor && !String.IsNullOrWhiteSpace(persona.Email))
+            {
+                claims.Add(new Claim(EmailClaimType, persona.Email));
+            }
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(Constants.Claims.Roles, role));
+            }
+
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim(Constants.Claims.Permissions, permission));
+            }
+
+            return claims;
+        }
+
+        private static string FormatBooleanClaim(bool value)
+        {
+            return value ? TrueClaimValue : FalseClaimValue;
+        }
+
+        private sealed class MockAuthenticateResultFeature : IAuthenticateResultFeature
+        {
+            public MockAuthenticateResultFeature(AuthenticateResult authenticateResult)
+            {
+                AuthenticateResult = authenticateResult;
+            }
+
+            public AuthenticateResult? AuthenticateResult { get; set; }
         }
     }
 }
