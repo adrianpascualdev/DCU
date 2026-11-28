@@ -136,11 +136,13 @@ namespace G1.Identity.Mock.Auth
                     .Get<IAuthenticateResultFeature>()?
                     .AuthenticateResult?
                     .Failure;
+                var credentialsProvided = !string.IsNullOrWhiteSpace(context.Request.Headers.Authorization)
+                    || context.Request.Cookies.ContainsKey(Constants.Antiforgery.SessionCookieName);
                 var errorCode = authorizeResult.Forbidden
                     ? Constants.ErrorCodes.PermissionDenied
-                    : authenticationFailure is null
-                        ? Constants.ErrorCodes.SessionRequired
-                        : Constants.ErrorCodes.SessionInvalid;
+                    : authenticationFailure is not null || credentialsProvided
+                        ? Constants.ErrorCodes.SessionInvalid
+                        : Constants.ErrorCodes.SessionRequired;
 
                 return ErrorMapping.WriteProblemAsync(context, errorCode, context.RequestAborted);
             }

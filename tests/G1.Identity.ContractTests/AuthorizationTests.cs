@@ -78,6 +78,18 @@ namespace G1.Identity.ContractTests
             Assert.Equal(Constants.ErrorCodes.SessionRequired, problem.Code);
         }
 
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task RejectedBearerOrSessionCookieProducesSessionInvalid(bool bearer, bool cookie)
+        {
+            var problem = await ExecuteAuthorizationFailureAsync(
+                PolicyAuthorizationResult.Challenge(), bearer, cookie);
+
+            Assert.Equal(StatusCodes.Status401Unauthorized, problem.StatusCode);
+            Assert.Equal(Constants.ErrorCodes.SessionInvalid, problem.Code);
+        }
+
         [Fact]
         public async Task MissingPermissionProducesStableForbiddenProblem()
         {
@@ -115,10 +127,18 @@ namespace G1.Identity.ContractTests
         }
 
         private static async Task<(int StatusCode, string Code)> ExecuteAuthorizationFailureAsync(
-            PolicyAuthorizationResult result)
+            PolicyAuthorizationResult result, bool bearer = false, bool cookie = false)
         {
             var context = new DefaultHttpContext();
             context.Request.Path = @"/api/v1/identity/catalog/roles";
+            if (bearer)
+            {
+                context.Request.Headers.Authorization = @"Bearer token-invalido";
+            }
+            if (cookie)
+            {
+                context.Request.Headers.Cookie = $@"{Constants.Antiforgery.SessionCookieName}=sesion-invalida";
+            }
             context.Response.Body = new MemoryStream();
             context.Items[Constants.HttpItems.CorrelationId] = @"correlacion-autorizacion";
 
