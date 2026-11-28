@@ -108,6 +108,25 @@ namespace G1.Identity.ContractTests
         }
 
         [Fact]
+        public void ActivityCannotExtendSessionPastAbsoluteTimeout()
+        {
+            var fixture = CreateFixture();
+            fixture.Service.Create(@"ses_1", @"usr_1", @"cli_1", [@"mock_persona"], @"Navegador");
+            Assert.True(fixture.Service.LinkRefreshToken(@"ses_1", @"rft_1"));
+
+            for (var interval = 0; interval < 35; interval++)
+            {
+                fixture.Time.Advance(TimeSpan.FromMinutes(20));
+                Assert.True(fixture.Service.Touch(@"ses_1"));
+            }
+
+            fixture.Time.Advance(TimeSpan.FromMinutes(20));
+            Assert.False(fixture.Service.Touch(@"ses_1"));
+            Assert.False(fixture.Service.IsRefreshTokenActive(@"ses_1", @"rft_1"));
+            Assert.Empty(fixture.Service.ListActive(@"usr_1"));
+        }
+
+        [Fact]
         public void RevokedSessionIdentifierCannotBeReused()
         {
             var fixture = CreateFixture();
