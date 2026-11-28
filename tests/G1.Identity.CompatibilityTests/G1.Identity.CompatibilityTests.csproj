@@ -13,7 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\G1.Identity.Mock\G1.Identity.Mock.csproj" />
   </ItemGroup>
 
 </Project>
