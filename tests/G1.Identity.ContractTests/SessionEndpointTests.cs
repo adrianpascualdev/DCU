@@ -49,6 +49,13 @@ namespace G1.Identity.ContractTests
             using var repeated = await DeleteAsync(host.Client, @"ses_other", cancellationToken);
             await ContractResponseAssertions.MatchesAsync(repeated, Constants.Paths.SessionById, @"delete", HttpStatusCode.NoContent, cancellationToken);
             Assert.Single(host.Sessions.ListActive(@"usr_1"));
+            var revocationEvents = host.Audit.List();
+            Assert.Equal(2, revocationEvents.Count);
+            Assert.Contains(revocationEvents, entry => entry.EventType == Constants.AuditEvents.SessionRevoked
+                && entry.ActorUserId == @"usr_1" && entry.TargetId == @"ses_other");
+            Assert.Contains(revocationEvents, entry => entry.EventType == Constants.AuditEvents.TokenRevoked
+                && entry.ActorUserId == @"usr_1" && entry.TargetId == @"ses_other");
+            Assert.All(revocationEvents, entry => Assert.Equal(@"corr_sessions", entry.CorrelationId));
         }
 
         [Fact]
@@ -92,6 +99,8 @@ namespace G1.Identity.ContractTests
             await ContractResponseAssertions.MatchesAsync(closed, Constants.Paths.Logout, @"post", HttpStatusCode.NoContent, cancellationToken);
             Assert.False(host.Sessions.IsRefreshTokenActive(@"ses_current", @"rft_current"));
             Assert.Empty(host.Sessions.ListActive(@"usr_1"));
+            Assert.Contains(host.Audit.List(), entry => entry.EventType == Constants.AuditEvents.Logout
+                && entry.TargetId == @"ses_current" && entry.Result == @"success");
         }
 
         [Fact]
@@ -197,6 +206,7 @@ namespace G1.Identity.ContractTests
             var app = builder.Build();
             app.Use(async (context, next) =>
             {
+                context.Items[Constants.HttpItems.CorrelationId] = @"corr_sessions";
                 if (authenticated)
                 {
                     context.User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -212,14 +222,17 @@ namespace G1.Identity.ContractTests
             new SessionEndpointDefinition().RegisterEndpoints(app);
             await app.StartAsync(token);
             return new TestHost(app, new HttpClient { BaseAddress = new Uri(app.Urls.Single()) },
-                app.Services.GetRequiredService<ISessionService>(), token);
+                app.Services.GetRequiredService<ISessionService>(),
+                app.Services.GetRequiredService<IAuditService>(), token);
         }
 
-        private sealed class TestHost(WebApplication app, HttpClient client, ISessionService sessions, CancellationToken token)
+        private sealed class TestHost(
+            WebApplication app, HttpClient client, ISessionService sessions, IAuditService audit, CancellationToken token)
             : IAsyncDisposable
         {
             internal HttpClient Client { get; } = client;
             internal ISessionService Sessions { get; } = sessions;
+            internal IAuditService Audit { get; } = audit;
 
             public async ValueTask DisposeAsync()
             {
