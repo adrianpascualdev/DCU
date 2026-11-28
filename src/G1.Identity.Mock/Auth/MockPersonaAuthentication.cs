@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using G1.Identity.Mock.Endpoints;
 using G1.Identity.Mock.Persistence;
 using G1.Identity.Mock.Persistence.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -31,7 +33,10 @@ namespace G1.Identity.Mock.Auth
     /// </summary>
     public static class MockPersonaAuthenticationExtensions
     {
-        private const string SchemeName = @"MockPersona";
+        /// <summary>
+        /// Nombre del esquema de autenticación utilizado para las personas del mock.
+        /// </summary>
+        internal const string SchemeName = @"MockPersona";
 
         /// <summary>
         /// Añade la autenticación de personas del mock al pipeline de autenticación.
@@ -55,6 +60,8 @@ namespace G1.Identity.Mock.Auth
                     options.ExpireTimeSpan = TimeSpan.FromHours(12);
                     options.SlidingExpiration = true;
                 });
+
+            builder.Services.AddScoped<IPersonaSelectionValidator, PersonaSelectionValidator>();
 
             return builder.AddScheme<MockPersonaAuthenticationOptions, MockPersonaAuthenticationHandler>(
                 SchemeName,
@@ -133,13 +140,13 @@ namespace G1.Identity.Mock.Auth
             }
 
             var cancellationToken = Context.RequestAborted;
-            var persona = await _dbContext.MockPersonas
-                .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    candidate => candidate.Key == requestedIdentifier || candidate.UserId == requestedIdentifier,
-                    cancellationToken);
+            var principal = await ResolvePrincipalAsync(
+                _dbContext,
+                requestedIdentifier,
+                Scheme.Name,
+                cancellationToken);
 
-            if (persona is null || !persona.CanAuthorize())
+            if (principal is null)
             {
                 Logger.LogWarning("Autenticación del mock rechazada con error genérico para el parámetro recibido.");
                 var failureResult = AuthenticateResult.Fail(GenericAuthenticationFailureMessage);
@@ -147,12 +154,6 @@ namespace G1.Identity.Mock.Auth
                 return failureResult;
             }
 
-            var activeRoles = await GetActiveRolesAsync(persona.UserId, cancellationToken);
-            var effectivePermissions = await GetEffectivePermissionsAsync(persona, activeRoles, cancellationToken);
-            var claims = BuildClaims(persona, activeRoles, effectivePermissions);
-
-            var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
             await Context.SignInAsync(
@@ -166,9 +167,63 @@ namespace G1.Identity.Mock.Auth
             return AuthenticateResult.Success(ticket);
         }
 
-        private async Task<List<string>> GetActiveRolesAsync(string userId, CancellationToken cancellationToken)
+        /// <summary>
+        /// Resuelve una persona activa en persistencia por su clave o <c>UserId</c>
+        /// y construye el principal autenticado con sus roles, permisos efectivos y minimización.
+        /// </summary>
+        /// <param name="dbContext">Contexto de persistencia del mock de identidad.</param>
+        /// <param name="personaIdentifier">Clave del fixture o <c>UserId</c> de la persona.</param>
+        /// <param name="authenticationType">Tipo de autenticación asignado a la identidad.</param>
+        /// <param name="cancellationToken">Token de cancelación.</param>
+        /// <returns>
+        /// El principal autenticado si la persona existe y está activa; en caso contrario, <see langword="null"/>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Se produce cuando <paramref name="dbContext"/> es nulo.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// Se produce cuando <paramref name="authenticationType"/> es nulo o está en blanco.
+        /// </exception>
+        internal static async Task<ClaimsPrincipal?> ResolvePrincipalAsync(
+            G1IdentityDbContext dbContext,
+            string personaIdentifier,
+            string authenticationType,
+            CancellationToken cancellationToken)
         {
-            return await _dbContext.RoleAssignments
+            ArgumentNullException.ThrowIfNull(dbContext);
+            ArgumentException.ThrowIfNullOrWhiteSpace(authenticationType);
+
+            if (String.IsNullOrWhiteSpace(personaIdentifier))
+            {
+                return null;
+            }
+
+            var normalizedIdentifier = personaIdentifier.Trim();
+            var persona = await dbContext.MockPersonas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    candidate => candidate.Key == normalizedIdentifier || candidate.UserId == normalizedIdentifier,
+                    cancellationToken);
+
+            if (persona is null || !persona.CanAuthorize())
+            {
+                return null;
+            }
+
+            var activeRoles = await GetActiveRolesAsync(dbContext, persona.UserId, cancellationToken);
+            var effectivePermissions = await GetEffectivePermissionsAsync(dbContext, persona, activeRoles, cancellationToken);
+            var claims = BuildClaims(persona, activeRoles, effectivePermissions);
+
+            var identity = new ClaimsIdentity(claims, authenticationType);
+            return new ClaimsPrincipal(identity);
+        }
+
+        private static async Task<List<string>> GetActiveRolesAsync(
+            G1IdentityDbContext dbContext,
+            string userId,
+            CancellationToken cancellationToken)
+        {
+            return await dbContext.RoleAssignments
                 .AsNoTracking()
                 .Where(assignment => assignment.UserId == userId && assignment.RevokedAt == null)
                 .Select(assignment => assignment.RoleCode)
@@ -177,7 +232,8 @@ namespace G1.Identity.Mock.Auth
                 .ToListAsync(cancellationToken);
         }
 
-        private async Task<List<string>> GetEffectivePermissionsAsync(
+        private static async Task<List<string>> GetEffectivePermissionsAsync(
+            G1IdentityDbContext dbContext,
             MockPersona persona,
             IReadOnlyCollection<string> activeRoles,
             CancellationToken cancellationToken)
@@ -187,7 +243,7 @@ namespace G1.Identity.Mock.Auth
                 return new List<string>();
             }
 
-            return await _dbContext.RolePermissions
+            return await dbContext.RolePermissions
                 .AsNoTracking()
                 .Where(rolePermission => rolePermission.Granted && activeRoles.Contains(rolePermission.RoleCode))
                 .Select(rolePermission => rolePermission.PermissionCode)
