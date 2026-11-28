@@ -69,6 +69,24 @@ namespace G1.Identity.ContractTests
         }
 
         [Theory]
+        [InlineData(@"""otro"", ""roles-1.0.0-provisional""")]
+        [InlineData(@"W/""roles-1.0.0-provisional""")]
+        [InlineData(@"*")]
+        public async Task RoleCatalogMatchesConditionalRequestsWithListsAndWeakTags(string ifNoneMatch)
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            await using var host = await CreateHostAsync(cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, Constants.Paths.RoleCatalog);
+            request.Headers.TryAddWithoutValidation(Constants.Headers.IfNoneMatch, ifNoneMatch);
+
+            using var response = await host.Client.SendAsync(request, cancellationToken);
+
+            Assert.Equal(HttpStatusCode.NotModified, response.StatusCode);
+            Assert.Equal(Constants.Catalog.RolesEntityTag,
+                Assert.Single(response.Headers.GetValues(Constants.Headers.ETag)));
+        }
+
+        [Theory]
         [InlineData(Constants.Paths.RoleCatalog)]
         [InlineData(Constants.Paths.PermissionCatalog)]
         public async Task CatalogRequiresAuthenticationWithDocumentedProblem(string path)

@@ -76,8 +76,12 @@ namespace G1.Identity.Mock.Endpoints
             cancellationToken.ThrowIfCancellationRequested();
             context.Response.Headers[Constants.Headers.ETag] = entityTag;
 
-            if (context.Request.Headers[Constants.Headers.IfNoneMatch]
-                .Any(value => string.Equals(value, entityTag, StringComparison.Ordinal)))
+            var candidates = context.Request.Headers[Constants.Headers.IfNoneMatch]
+                .SelectMany(value => (value ?? string.Empty).Split(','))
+                .Select(value => value.Trim());
+            if (candidates.Any(value => value == @"*"
+                || string.Equals(value, entityTag, StringComparison.Ordinal)
+                || string.Equals(value, @"W/" + entityTag, StringComparison.Ordinal)))
             {
                 return TypedResults.StatusCode(StatusCodes.Status304NotModified);
             }

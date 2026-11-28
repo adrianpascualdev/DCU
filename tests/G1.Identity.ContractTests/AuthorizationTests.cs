@@ -4,9 +4,11 @@ using System.Text.Json;
 using G1.Identity.Mock;
 using G1.Identity.Mock.Auth;
 using G1.Identity.Mock.Filters;
+using G1.Identity.Mock.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
+using OpenIddict.Abstractions;
 
 namespace G1.Identity.ContractTests
 {
@@ -70,12 +72,35 @@ namespace G1.Identity.ContractTests
         }
 
         [Fact]
+        public void RoleClaimEmittedByOpenIddictUsesTheSamePermissionMatrix()
+        {
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(OpenIddictConstants.Claims.Role, Constants.Roles.SportsManager)], @"test"));
+
+            Assert.True(PermissionPolicies.IsGranted(principal, Constants.Permissions.UserLookup));
+            Assert.True(PermissionPolicies.IsGranted(principal, Constants.Permissions.UserSummaryRead));
+            Assert.False(PermissionPolicies.IsGranted(principal, Constants.Permissions.IdentityAdmin));
+        }
+
+        [Fact]
         public async Task MissingSessionProducesStableUnauthorizedProblem()
         {
             var problem = await ExecuteAuthorizationFailureAsync(PolicyAuthorizationResult.Challenge());
 
             Assert.Equal(StatusCodes.Status401Unauthorized, problem.StatusCode);
             Assert.Equal(Constants.ErrorCodes.SessionRequired, problem.Code);
+        }
+
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task RejectedBearerOrSessionCookieProducesSessionInvalid(bool bearer, bool cookie)
+        {
+            var problem = await ExecuteAuthorizationFailureAsync(
+                PolicyAuthorizationResult.Challenge(), bearer, cookie);
+
+            Assert.Equal(StatusCodes.Status401Unauthorized, problem.StatusCode);
+            Assert.Equal(Constants.ErrorCodes.SessionInvalid, problem.Code);
         }
 
         [Fact]
@@ -85,6 +110,26 @@ namespace G1.Identity.ContractTests
 
             Assert.Equal(StatusCodes.Status403Forbidden, problem.StatusCode);
             Assert.Equal(Constants.ErrorCodes.PermissionDenied, problem.Code);
+        }
+
+        [Fact]
+        public async Task ForbiddenRequestIsAuditedWithoutRequestParametersOrCredentials()
+        {
+            var audit = new AuditService(TimeProvider.System);
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(Constants.Claims.Subject, @"usr_1")], @"test"));
+
+            var problem = await ExecuteAuthorizationFailureAsync(
+                PolicyAuthorizationResult.Forbid(), auditService: audit, user: principal);
+
+            Assert.Equal(Constants.ErrorCodes.PermissionDenied, problem.Code);
+            var entry = Assert.Single(audit.List());
+            Assert.Equal(@"access_denied", entry.EventType);
+            Assert.Equal(@"usr_1", entry.ActorUserId);
+            Assert.Equal(@"authorization", entry.TargetId);
+            Assert.Equal(@"denied", entry.Result);
+            Assert.Equal(@"correlacion-autorizacion", entry.CorrelationId);
+            Assert.NotEqual(default, entry.OccurredAt);
         }
 
         [Fact]
@@ -115,15 +160,28 @@ namespace G1.Identity.ContractTests
         }
 
         private static async Task<(int StatusCode, string Code)> ExecuteAuthorizationFailureAsync(
-            PolicyAuthorizationResult result)
+            PolicyAuthorizationResult result, bool bearer = false, bool cookie = false,
+            AuditService? auditService = null, ClaimsPrincipal? user = null)
         {
             var context = new DefaultHttpContext();
             context.Request.Path = @"/api/v1/identity/catalog/roles";
+            if (user is not null)
+            {
+                context.User = user;
+            }
+            if (bearer)
+            {
+                context.Request.Headers.Authorization = @"Bearer token-invalido";
+            }
+            if (cookie)
+            {
+                context.Request.Headers.Cookie = $@"{Constants.Antiforgery.SessionCookieName}=sesion-invalida";
+            }
             context.Response.Body = new MemoryStream();
             context.Items[Constants.HttpItems.CorrelationId] = @"correlacion-autorizacion";
 
             var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
-            await PermissionPolicies.CreateResultHandler().HandleAsync(
+            await PermissionPolicies.CreateResultHandler(auditService).HandleAsync(
                 _ => Task.CompletedTask,
                 context,
                 policy,

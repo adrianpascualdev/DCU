@@ -65,8 +65,8 @@ namespace G1.Identity.Mock.Endpoints
             }
 
             var sessions = sessionService.ListActive(userId);
-            var items = sessions
-                .Skip((page - 1) * pageSize)
+            var offset = ((long)page - 1) * pageSize;
+            var items = (offset >= sessions.Count ? Enumerable.Empty<SessionSnapshot>() : sessions.Skip((int)offset))
                 .Take(pageSize)
                 .Select(session => new SessionResponse(
                     session.SessionId,
