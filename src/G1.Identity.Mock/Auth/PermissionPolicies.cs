@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using System.Text.Json;
 
+using G1.Identity.Mock.Abstractions;
 using G1.Identity.Mock.Endpoints;
+using G1.Identity.Mock.Exceptions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
+using Microsoft.AspNetCore.Routing;
 
 namespace G1.Identity.Mock.Auth
 {
@@ -103,9 +106,9 @@ namespace G1.Identity.Mock.Auth
         /// Crea el adaptador que traduce los rechazos de autorización al contrato de errores de G1.
         /// </summary>
         /// <returns>Manejador de resultados de autorización.</returns>
-        internal static IAuthorizationMiddlewareResultHandler CreateResultHandler()
+        internal static IAuthorizationMiddlewareResultHandler CreateResultHandler(IAuditService? auditService = null)
         {
-            return new ProblemDetailsAuthorizationResultHandler();
+            return new ProblemDetailsAuthorizationResultHandler(auditService);
         }
 
         /// <summary>
@@ -116,11 +119,18 @@ namespace G1.Identity.Mock.Auth
         {
             ArgumentNullException.ThrowIfNull(services);
             services.AddSingleton<IAuthorizationMiddlewareResultHandler>(
-                _ => CreateResultHandler());
+                provider => CreateResultHandler(provider.GetService<IAuditService>()));
         }
 
         private sealed class ProblemDetailsAuthorizationResultHandler : IAuthorizationMiddlewareResultHandler
         {
+            private readonly IAuditService? _auditService;
+
+            internal ProblemDetailsAuthorizationResultHandler(IAuditService? auditService)
+            {
+                _auditService = auditService;
+            }
+
             public Task HandleAsync(
                 RequestDelegate next,
                 HttpContext context,
@@ -130,6 +140,19 @@ namespace G1.Identity.Mock.Auth
                 if (authorizeResult.Succeeded)
                 {
                     return next(context);
+                }
+
+                if (authorizeResult.Forbidden && _auditService is not null)
+                {
+                    var actorUserId = context.User.FindFirst(Constants.Claims.Subject)?.Value;
+                    if (!string.IsNullOrWhiteSpace(actorUserId))
+                    {
+                        var target = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText
+                            ?? @"authorization";
+                        _auditService.Record(
+                            @"access_denied", actorUserId, target, @"denied",
+                            ProblemResponseWriter.GetTraceId(context));
+                    }
                 }
 
                 var authenticationFailure = context.Features

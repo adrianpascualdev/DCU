@@ -4,6 +4,7 @@ using System.Text.Json;
 using G1.Identity.Mock;
 using G1.Identity.Mock.Auth;
 using G1.Identity.Mock.Filters;
+using G1.Identity.Mock.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
@@ -100,6 +101,26 @@ namespace G1.Identity.ContractTests
         }
 
         [Fact]
+        public async Task ForbiddenRequestIsAuditedWithoutRequestParametersOrCredentials()
+        {
+            var audit = new AuditService(TimeProvider.System);
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(Constants.Claims.Subject, @"usr_1")], @"test"));
+
+            var problem = await ExecuteAuthorizationFailureAsync(
+                PolicyAuthorizationResult.Forbid(), auditService: audit, user: principal);
+
+            Assert.Equal(Constants.ErrorCodes.PermissionDenied, problem.Code);
+            var entry = Assert.Single(audit.List());
+            Assert.Equal(@"access_denied", entry.EventType);
+            Assert.Equal(@"usr_1", entry.ActorUserId);
+            Assert.Equal(@"authorization", entry.TargetId);
+            Assert.Equal(@"denied", entry.Result);
+            Assert.Equal(@"correlacion-autorizacion", entry.CorrelationId);
+            Assert.NotEqual(default, entry.OccurredAt);
+        }
+
+        [Fact]
         public void BearerHeaderCannotBypassAntiforgeryWhenSessionCookieIsPresent()
         {
             var context = new DefaultHttpContext();
@@ -127,10 +148,15 @@ namespace G1.Identity.ContractTests
         }
 
         private static async Task<(int StatusCode, string Code)> ExecuteAuthorizationFailureAsync(
-            PolicyAuthorizationResult result, bool bearer = false, bool cookie = false)
+            PolicyAuthorizationResult result, bool bearer = false, bool cookie = false,
+            AuditService? auditService = null, ClaimsPrincipal? user = null)
         {
             var context = new DefaultHttpContext();
             context.Request.Path = @"/api/v1/identity/catalog/roles";
+            if (user is not null)
+            {
+                context.User = user;
+            }
             if (bearer)
             {
                 context.Request.Headers.Authorization = @"Bearer token-invalido";
@@ -143,7 +169,7 @@ namespace G1.Identity.ContractTests
             context.Items[Constants.HttpItems.CorrelationId] = @"correlacion-autorizacion";
 
             var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
-            await PermissionPolicies.CreateResultHandler().HandleAsync(
+            await PermissionPolicies.CreateResultHandler(auditService).HandleAsync(
                 _ => Task.CompletedTask,
                 context,
                 policy,
