@@ -11,6 +11,7 @@ namespace G1.Identity.Mock.Services
     internal sealed class SessionService : ISessionService
     {
         private readonly ConcurrentDictionary<string, SessionState> _sessions = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<string, string> _refreshTokenOwners = new(StringComparer.Ordinal);
         private readonly TimeProvider _timeProvider;
         private readonly SessionSettings _options;
 
@@ -127,8 +128,19 @@ namespace G1.Identity.Mock.Services
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
             ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
-            return _sessions.TryGetValue(sessionId, out var state)
-                && state.LinkRefreshToken(tokenId, _timeProvider.GetUtcNow());
+            if (!_refreshTokenOwners.TryAdd(tokenId, sessionId))
+            {
+                return false;
+            }
+
+            if (_sessions.TryGetValue(sessionId, out var state)
+                && state.LinkRefreshToken(tokenId, _timeProvider.GetUtcNow()))
+            {
+                return true;
+            }
+
+            _refreshTokenOwners.TryRemove(tokenId, out _);
+            return false;
         }
 
         /// <inheritdoc />
@@ -137,8 +149,21 @@ namespace G1.Identity.Mock.Services
             ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
             ArgumentException.ThrowIfNullOrWhiteSpace(previousTokenId);
             ArgumentException.ThrowIfNullOrWhiteSpace(nextTokenId);
-            return _sessions.TryGetValue(sessionId, out var state)
-                && state.RotateRefreshToken(previousTokenId, nextTokenId, _timeProvider.GetUtcNow());
+            if (!_refreshTokenOwners.TryGetValue(previousTokenId, out var owner)
+                || !string.Equals(owner, sessionId, StringComparison.Ordinal)
+                || !_refreshTokenOwners.TryAdd(nextTokenId, sessionId))
+            {
+                return false;
+            }
+
+            if (_sessions.TryGetValue(sessionId, out var state)
+                && state.RotateRefreshToken(previousTokenId, nextTokenId, _timeProvider.GetUtcNow()))
+            {
+                return true;
+            }
+
+            _refreshTokenOwners.TryRemove(nextTokenId, out _);
+            return false;
         }
 
         /// <inheritdoc />
@@ -146,7 +171,9 @@ namespace G1.Identity.Mock.Services
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
             ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
-            return _sessions.TryGetValue(sessionId, out var state)
+            return _refreshTokenOwners.TryGetValue(tokenId, out var owner)
+                && string.Equals(owner, sessionId, StringComparison.Ordinal)
+                && _sessions.TryGetValue(sessionId, out var state)
                 && state.IsRefreshTokenActive(tokenId, _timeProvider.GetUtcNow());
         }
 

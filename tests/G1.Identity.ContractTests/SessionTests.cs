@@ -44,6 +44,26 @@ namespace G1.Identity.ContractTests
         }
 
         [Fact]
+        public void RefreshTokenIdentifierCannotMoveBetweenSessionsEvenAfterRotationOrRevocation()
+        {
+            var fixture = CreateFixture();
+            fixture.Service.Create(@"ses_1", @"usr_1", @"cli_1", [@"mock_persona"], @"Uno");
+            fixture.Service.Create(@"ses_2", @"usr_2", @"cli_1", [@"mock_persona"], @"Dos");
+
+            Assert.True(fixture.Service.LinkRefreshToken(@"ses_1", @"rft_1"));
+            Assert.False(fixture.Service.LinkRefreshToken(@"ses_2", @"rft_1"));
+            Assert.True(fixture.Service.LinkRefreshToken(@"ses_2", @"rft_other"));
+            Assert.False(fixture.Service.RotateRefreshToken(@"ses_2", @"rft_other", @"rft_1"));
+            Assert.True(fixture.Service.RotateRefreshToken(@"ses_1", @"rft_1", @"rft_2"));
+            Assert.False(fixture.Service.LinkRefreshToken(@"ses_2", @"rft_1"));
+            Assert.False(fixture.Service.LinkRefreshToken(@"ses_2", @"rft_2"));
+
+            fixture.Service.Revoke(@"usr_1", @"ses_1", Constants.Sessions.UserRevokedReason);
+            Assert.False(fixture.Service.LinkRefreshToken(@"ses_2", @"rft_2"));
+            Assert.True(fixture.Service.IsRefreshTokenActive(@"ses_2", @"rft_other"));
+        }
+
+        [Fact]
         public void ForeignSessionIsReportedAsNotFound()
         {
             var fixture = CreateFixture();
