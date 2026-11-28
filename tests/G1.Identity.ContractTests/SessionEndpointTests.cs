@@ -52,6 +52,21 @@ namespace G1.Identity.ContractTests
         }
 
         [Fact]
+        public async Task LargePageDoesNotWrapAroundToTheFirstSession()
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            await using var host = await CreateHostAsync(cancellationToken);
+            host.Sessions.Create(@"ses_current", @"usr_1", @"cli_1", [@"mock"], @"Actual");
+
+            using var response = await host.Client.GetAsync(
+                $@"{Constants.Paths.Sessions}?page={int.MaxValue}&pageSize=100", cancellationToken);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            Assert.Empty(document.RootElement.GetProperty(@"items").EnumerateArray());
+            Assert.Equal(1, document.RootElement.GetProperty(@"total").GetInt32());
+        }
+
+        [Fact]
         public async Task RevokeAllKeepsCurrentSessionAndLogoutRevokesIt()
         {
             var cancellationToken = TestContext.Current.CancellationToken;
